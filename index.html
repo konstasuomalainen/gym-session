@@ -301,15 +301,55 @@ const EFFORT = ['Easy','OK','Hard','Max'];
    Storage
    ============================================================ */
 const KEY = 'sessions.v1';
+const SCHEMA = 1;
 let store = null;
 
-function blank(){ return {gymDone:0, homeDone:0, active:null, history:[]}; }
+function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[]}; }
+
+/* Bring a stored object of any older shape up to SCHEMA.
+   To change the shape: bump SCHEMA, then append one block below.
+   Never edit an existing block. Data in the wild has already run it. */
+function migrate(data){
+  let v = Number(data.version) || 0;
+  if(v === 0){
+    /* Before versioning. The shape already matches 1, so just stamp it. */
+    v = 1;
+  }
+  /* if(v === 1){ ...reshape data...; v = 2; } */
+  data.version = v;
+  return data;
+}
+
+/* Migrate, then defend against a truncated or hand-edited file. */
+function adopt(data){
+  const s = Object.assign(blank(), migrate(data));
+  if(!Array.isArray(s.history)) s.history = [];
+  s.history = s.history.filter(x => x && x.track && x.templateId);
+  s.history.forEach(x => { if(!x.ex) x.ex = {}; if(!x.cardio) x.cardio = {}; });
+  s.gymDone = Math.max(0, Math.floor(Number(s.gymDone)) || 0);
+  s.homeDone = Math.max(0, Math.floor(Number(s.homeDone)) || 0);
+  if(s.active && !(s.active.track && s.active.templateId && s.active.ex)) s.active = null;
+  if(s.active && !s.active.cardio){
+    s.active.cardio = {...cardioFor(s.active.track, s.active.num || 1), actual:'', done:false};
+  }
+  return s;
+}
 
 function load(){
+  let raw = null;
+  try{ raw = localStorage.getItem(KEY); }catch(e){}
   try{
-    const raw = localStorage.getItem(KEY);
-    store = raw ? Object.assign(blank(), JSON.parse(raw)) : blank();
-  }catch(e){ store = blank(); }
+    store = raw ? adopt(JSON.parse(raw)) : blank();
+  }catch(e){
+    store = blank();
+    if(raw) keepCorrupt(raw);
+  }
+  if(raw && store.version === SCHEMA) save();
+}
+
+/* Never silently drop unreadable data. Park it so it can be recovered by hand. */
+function keepCorrupt(raw){
+  try{ localStorage.setItem(KEY + '.corrupt.' + Date.now(), raw); }catch(e){}
 }
 function save(){
   try{ localStorage.setItem(KEY, JSON.stringify(store)); }
@@ -332,7 +372,12 @@ function toast(msg){
   const t = $('#toast'); t.textContent = msg; t.classList.add('show');
   clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
 }
-function tmpl(track, id){ return PROGRAM[track].templates[id]; }
+/* A session in history can name a template that has since been edited out of
+   PROGRAM. Degrade to a stub rather than throwing and taking the Log view down. */
+function tmpl(track, id){
+  const t = PROGRAM[track] && PROGRAM[track].templates[id];
+  return t || {name:id || 'Unknown', focus:'No longer in the programme', exercises:[]};
+}
 function nextTemplateId(track){
   const o = PROGRAM[track].order;
   const done = track === 'gym' ? store.gymDone : store.homeDone;
@@ -347,6 +392,7 @@ function lastFor(exId){
   return null;
 }
 function setLine(sets){
+  if(!Array.isArray(sets)) return '';
   return sets.filter(x => x && (x.w || x.r))
     .map(x => (x.w ? x.w + ' kg' : 'bw') + ' x ' + (x.r || '?') + (x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
     .join('   ');
@@ -432,7 +478,7 @@ function startSession(track){
   const n = (track === 'gym' ? store.gymDone : store.homeDone) + 1;
   const t = tmpl(track, id);
   const ex = {};
-  t.exercises.forEach(e => { ex[e.id] = Array.from({length:e.sets}, () => ({w:'',r:'',e:0,done:false})); });
+  t.exercises.forEach(e => { ex[e.id] = freshSets(e); });
   store.active = {
     track, num:n, templateId:id, startedAt:new Date().toISOString(),
     cardio:{...cardioFor(track,n), actual:'', done:false},
@@ -442,8 +488,19 @@ function startSession(track){
   view = 'session'; openEx = t.exercises[0].id; render();
 }
 
+/* Blank sets for an exercise, used on start and when PROGRAM gains an
+   exercise while a session is already running. */
+function freshSets(exd){
+  return Array.from({length:exd.sets}, () => ({w:'',r:'',e:0,done:false}));
+}
+function slotsFor(exd){
+  const a = store.active;
+  if(!Array.isArray(a.ex[exd.id])) a.ex[exd.id] = freshSets(exd);
+  return a.ex[exd.id];
+}
 function exComplete(exId){
   const s = store.active.ex[exId];
+  if(!Array.isArray(s) || !s.length) return false;
   return s.every(x => x.done) || s.every(x => x.w !== '' || x.r !== '');
 }
 
@@ -498,7 +555,7 @@ function renderSession(app){
 
   /* exercises */
   t.exercises.forEach(exd => {
-    const sets = a.ex[exd.id];
+    const sets = slotsFor(exd);
     const done = exComplete(exd.id);
     const isOpen = openEx === exd.id;
     const card = el(`<div class="ex ${done ? 'done' : ''}"></div>`);
@@ -642,12 +699,18 @@ function renderHistory(app){
     item.onclick = () => {
       let d = item.querySelector('.detail');
       if(d){ d.remove(); return; }
-      const lines = t.exercises.map(e => {
-        const sets = s.ex[e.id] || [];
-        const line = setLine(sets);
-        return e.name + (line ? '\n  ' + line : '\n  not logged');
+      /* Template order first, then anything logged under an id the template
+         no longer lists, so renamed or retired exercises stay readable. */
+      const names = new Map(t.exercises.map(e => [e.id, e.name]));
+      Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
+      const lines = [...names].map(([id, name]) => {
+        const line = setLine(s.ex[id] || []);
+        return name + (line ? '\n  ' + line : '\n  not logged');
       });
-      const walk = 'Walk: ' + (s.cardio.actual || (s.cardio.done ? s.cardio.minutes : '0')) + ' min at ' + s.cardio.speed + ' km/h, ' + s.cardio.incline + ' percent';
+      const c = s.cardio;
+      const walk = c.speed
+        ? 'Walk: ' + (c.actual || (c.done ? c.minutes : '0')) + ' min at ' + c.speed + ' km/h, ' + c.incline + ' percent'
+        : 'Walk: not logged';
       item.appendChild(el(`<span class="detail">${esc(walk + '\n\n' + lines.join('\n') + (s.note ? '\n\n' + s.note : ''))}</span>`));
     };
     app.appendChild(item);
@@ -680,8 +743,15 @@ function renderData(app){
       try{
         const data = JSON.parse(r.result);
         if(!Array.isArray(data.history)) throw new Error('bad file');
-        store = Object.assign(blank(), data); save(); toast('Imported'); view = 'home'; render();
-      }catch(err){ toast('That file could not be read'); }
+        if((Number(data.version) || 0) > SCHEMA) throw new Error('newer');
+        store = adopt(data); save();
+        toast('Imported ' + store.history.length + ' sessions');
+        view = 'home'; render();
+      }catch(err){
+        toast(err.message === 'newer'
+          ? 'That backup is from a newer version of the app'
+          : 'That file could not be read');
+      }
     };
     r.readAsText(f);
   };
