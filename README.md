@@ -2,29 +2,35 @@
 
 A session based gym and home workout tracker. One HTML file, no backend, no build step. Data lives in the browser's localStorage on the device that used it.
 
-## Deploy
+Live at https://konstasuomalainen.github.io/gym-session/
 
-1. Create a repo, for example `sessions`.
-2. Drop `index.html` in the root and push.
-3. Repo settings, Pages, source `Deploy from a branch`, branch `main`, folder `/ (root)`.
-4. Wait a minute, then open `https://<username>.github.io/sessions/`.
-5. On the phone, share sheet, `Add to Home Screen`. It opens without browser chrome after that.
+## Install
+
+Open it on the phone, Chrome menu, `Install app`. It runs full screen and works offline
+after the first load.
 
 ## How it works
 
 - The counter, not the calendar, drives everything. Session 7 is session 7 whether it happens on Tuesday or a week later. Nothing goes red, there is nothing to catch up.
-- Gym rotation: Upper A, Upper B, Lower, repeat. Home is its own counter.
-- The walk length, incline and speed ramp by session number. Gym days top out at 30 min, home days at 45.
+- Gym is one session: a giant set of barbell curl, overhead press and row, then lateral raises and machine chest press. Everything to failure. Home is its own counter.
+- The walk is a standing prescription, not a ramp. 30 minutes minimum at 8-10 percent and 4-6 km/h.
 - Each exercise shows what you lifted for it last time, pulled from history by exercise id.
+- Opening an exercise shows a start and end frame of the movement.
 - Everything autosaves on every keystroke. Closing the tab mid session loses nothing.
 
 ## Changing the routine
 
 Edit the `PROGRAM` block at the top of `index.html`. It is the first thing in the script and nothing else needs to change.
 
-Keep the `id` stable when renaming an exercise. History is stored by id, so changing `latpull` to `lat_pulldown` orphans every past entry for it.
+Keep the `id` stable when renaming an exercise. History is stored by id, so changing `chestpress` to `chest_press` orphans every past entry for it, and breaks the link to its image.
 
-To add a demo video, put a URL in the exercise's `link` field and a link appears in the card.
+Optional fields on an exercise: `group` labels exercises done back to back with no rest, and `link` puts a demo video URL in the card.
+
+## Exercise images
+
+`img/<id>.png`, two panels, start on the left and end on the right, 2:1. Matched to the
+exercise by id, so adding one is dropping the file in. An exercise without an image just
+does not show one.
 
 ## Backup
 
@@ -32,4 +38,4 @@ Data, Export writes a JSON file. Do it now and then, and always before clearing 
 
 ## Session counters
 
-Data, Session counters adjusts which workout comes next and where the walk ramp sits. Use it if you start mid programme or skip a template.
+Data, Session counters adjusts the gym and home session numbers. Use it if you start mid programme.

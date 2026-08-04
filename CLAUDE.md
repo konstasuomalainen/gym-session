@@ -8,7 +8,8 @@ at https://konstasuomalainen.github.io/gym-session/
 These are deliberate. Do not relax them without being asked.
 
 - **Single file.** All markup, styles and logic live in `index.html`. The only other files
-  are PWA plumbing (`manifest.json`, `sw.js`, icons) and `README.md`.
+  are PWA plumbing (`manifest.json`, `sw.js`, icons), the exercise images in `img/`, and
+  `README.md`.
 - **No dependencies.** No npm, no frameworks, no CDN scripts. The one external request is
   the Google Fonts stylesheet, and the app must stay usable if it fails.
 - **No build step.** What is in the repo is what the browser runs. Never introduce a
@@ -25,7 +26,13 @@ routine. Adding, removing or reordering exercises and sessions means editing tha
 and nothing else. If a routine change forces you to touch rendering code, the change is
 wrong — fix the data shape instead.
 
-`cardioFor()` sits just below it and owns the walk ramp. Same rule.
+`cardioFor()` sits just below it and owns the walk prescription. Same rule.
+
+Two optional fields on an exercise:
+
+- `group` — a label for exercises performed back to back with no rest. Consecutive
+  exercises sharing a string get one heading above the first of them.
+- there is no image field, by design. See below.
 
 ## Exercise ids are permanent
 
@@ -39,6 +46,20 @@ the movement across every session ever logged.
 - Removing an exercise or a template: past sessions still reference it. Rendering must
   degrade to showing the raw id, not throw. `tmpl()` and `renderHistory()` already handle
   this — keep it that way.
+
+## Exercise images
+
+`img/<id>.png` — a two panel image, start position on the left, end position on the right,
+with a red arrow showing the direction the weight travels. 2:1, 800x400.
+
+Looked up by exercise id, never named in `PROGRAM`. Adding an image is dropping a file in;
+there is nothing to wire up. A missing file removes its own element, so an exercise without
+one is not a broken layout. This is another reason ids are permanent: the id is the
+filename.
+
+They are deliberately absent from `ASSETS` in `sw.js`. The runtime handler caches each one
+the first time it is displayed, which keeps the install step from depending on files that
+may not exist yet.
 
 ## Stored data shape
 

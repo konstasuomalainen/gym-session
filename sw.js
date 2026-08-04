@@ -1,7 +1,7 @@
 /* Sessions service worker.
    Bump VERSION whenever a cached asset changes, or installed phones
    keep serving the old copy. */
-const VERSION = 'v1';
+const VERSION = 'v2';
 const SHELL = 'shell-' + VERSION;
 const RUNTIME = 'runtime-' + VERSION;
 
@@ -15,10 +15,14 @@ const ASSETS = [
   './apple-touch-icon.png'
 ];
 
+/* Assets are added one at a time and failures are swallowed. addAll() is
+   all or nothing, so a single missing file would leave the app with no
+   service worker at all. Exercise images are not listed here: they are
+   picked up by the runtime handler below the first time one is shown. */
 self.addEventListener('install', e => {
   e.waitUntil(
     caches.open(SHELL)
-      .then(c => c.addAll(ASSETS))
+      .then(c => Promise.all(ASSETS.map(u => c.add(u).catch(() => {}))))
       .then(() => self.skipWaiting())
   );
 });
