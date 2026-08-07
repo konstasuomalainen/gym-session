@@ -135,6 +135,20 @@ header{
 .hero h2{font-family:var(--display);font-weight:700;font-size:var(--t-h1);line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:6px 0 4px}
 .hero .focus{font-size:var(--t-sub);color:var(--muted);margin:0}
 .stripe{height:6px;background:var(--red);width:64px;margin:14px 0 0}
+.chip{
+  display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--r);
+  background:var(--blue);color:var(--on-accent);font-family:var(--mono);letter-spacing:0;
+}
+/* The home block is daily, so it is a standing row rather than a second hero
+   competing with the gym one. */
+.daily{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:inherit;
+  background:var(--card);border:2px solid var(--edge);border-radius:var(--r);
+  padding:14px;margin:14px 0 0;cursor:pointer;
+}
+.daily b{display:block;font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;line-height:1;margin:3px 0 2px}
+.daily .sub{font-size:var(--t-sub);color:var(--muted)}
+.daily .go{margin-left:auto;font-size:24px;color:var(--blue)}
 
 /* buttons */
 .btn{
@@ -191,6 +205,9 @@ header{
 .exbody .forms{padding:0}
 .exmeta{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:var(--t-sub);color:var(--muted)}
 .exmeta .form{margin-left:auto}
+.exnote{margin-top:12px}
+.exnote .eyebrow{margin-bottom:5px}
+.exnote textarea{min-height:54px;font-size:var(--t-sub)}
 .forminfo{margin:12px 0 0}
 .forminfo h4{font-family:var(--display);font-weight:700;font-size:19px;text-transform:uppercase;margin:0;letter-spacing:.02em}
 .forminfo .cue{font-size:var(--t-sub);color:var(--muted);margin:2px 0 0}
@@ -199,7 +216,6 @@ header{
 .rnum{font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:2px 0 6px}
 .rowlabel{font-family:var(--display);font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:.02em;line-height:1;margin:0 0 5px}
 .round .setrow{border-top:none;padding:6px 0}
-.round .effort{display:none}
 
 .ex{border:2px solid var(--edge);border-radius:var(--r);background:var(--card);margin-bottom:12px;overflow:hidden}
 .ex.done{background:var(--chalk)}
@@ -255,12 +271,14 @@ header{
    sweaty fingertip reliably hits. */
 .setdone{border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);height:52px;cursor:pointer;font-size:18px;color:var(--muted)}
 .setdone[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--on-accent)}
-.effort{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.effort button{
-  padding:8px 2px;border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);cursor:pointer;
-  font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+/* One bit, and only once the set is ticked: did this one go the distance. */
+.cut{
+  display:none;margin-top:6px;padding:5px 9px;border:2px solid var(--hair);background:transparent;
+  border-radius:var(--r);cursor:pointer;color:var(--muted);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;
 }
-.effort button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-accent)}
+.setrow.done .cut{display:inline-block}
+.cut[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-accent)}
 .exactions{display:flex;gap:8px;margin-top:12px}
 .linkbtn{position:relative;background:none;border:none;padding:6px 0;cursor:pointer;font-size:var(--t-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
 /* Text buttons stay visually small and get a 44px hit area anyway. Measured at
@@ -318,6 +336,33 @@ textarea{
 .hitem .date{font-family:var(--mono);font-size:var(--t-sub);color:var(--muted)}
 .hitem .detail{font-family:var(--mono);font-size:var(--t-data);color:var(--muted);margin-top:8px;white-space:pre-wrap;line-height:1.6;display:block}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:2px dashed var(--hair);border-radius:var(--r)}
+details.card > summary{
+  padding:16px;cursor:pointer;list-style:none;
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::after{content:" +";font-family:var(--mono)}
+details.card[open] > summary::after{content:" \2212"}
+details.card > .pad{padding-top:0}
+
+/* confirm() replacement */
+.sheetwrap{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;transition:opacity .22s ease;
+}
+.sheetwrap.in{opacity:1}
+.sheet{
+  width:100%;max-width:560px;background:var(--card);border-top:2px solid var(--edge);
+  border-radius:var(--r) var(--r) 0 0;padding:20px var(--pad) calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(14px);transition:transform .22s cubic-bezier(.2,.8,.3,1);
+}
+.sheetwrap.in .sheet{transform:none}
+.sheet h3{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;margin:0 0 6px;line-height:1}
+.sheet p{margin:0 0 14px;font-size:var(--t-sub);color:var(--muted)}
+.sheet textarea{margin-bottom:14px}
+.sheetrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn.danger{background:var(--red);border-color:var(--red);color:var(--on-accent)}
 
 .toast{
   position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:50;
@@ -325,6 +370,12 @@ textarea{
   font-size:var(--t-sub);font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s ease;
 }
 .toast.show{opacity:1}
+/* Only the undo variant is interactive; a plain toast must never eat a tap. */
+.toast.wide.show{display:flex;align-items:center;gap:14px;pointer-events:auto}
+.toast .undo{
+  background:none;border:none;padding:6px 2px;cursor:pointer;color:var(--floor);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+}
 
 /* Entry motion only, and only on the Now screen. 320ms plus a stagger meant
    the last card settled almost half a second after a tap. */
@@ -348,7 +399,7 @@ textarea{
   <main id="app"></main>
 </div>
 <div class="foot" id="foot" hidden></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============================================================
@@ -417,10 +468,10 @@ const EFFORT = ['Easy','OK','Hard','Max'];
    Storage
    ============================================================ */
 const KEY = 'sessions.v1';
-const SCHEMA = 1;
+const SCHEMA = 2;
 let store = null;
 
-function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[]}; }
+function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[], lastExport:null}; }
 
 /* Bring a stored object of any older shape up to SCHEMA.
    To change the shape: bump SCHEMA, then append one block below.
@@ -431,7 +482,18 @@ function migrate(data){
     /* Before versioning. The shape already matches 1, so just stamp it. */
     v = 1;
   }
-  /* if(v === 1){ ...reshape data...; v = 2; } */
+  if(v === 1){
+    /* Notes moved from one per session to one per exercise, exercises can be
+       marked skipped, and the last export is remembered. Old sessions get the
+       empty versions of all three; their session note is left where it is. */
+    data.history = (data.history || []).map(s => ({exNote:{}, skipped:{}, ...s}));
+    if(data.active){
+      if(!data.active.exNote) data.active.exNote = {};
+      if(!data.active.skipped) data.active.skipped = {};
+    }
+    if(data.lastExport === undefined) data.lastExport = null;
+    v = 2;
+  }
   data.version = v;
   return data;
 }
@@ -441,10 +503,19 @@ function adopt(data){
   const s = Object.assign(blank(), migrate(data));
   if(!Array.isArray(s.history)) s.history = [];
   s.history = s.history.filter(x => x && x.track && x.templateId);
-  s.history.forEach(x => { if(!x.ex) x.ex = {}; if(!x.cardio) x.cardio = {}; });
+  s.history.forEach(x => {
+    if(!x.ex) x.ex = {};
+    if(!x.cardio) x.cardio = {};
+    if(!x.exNote) x.exNote = {};
+    if(!x.skipped) x.skipped = {};
+  });
   s.gymDone = Math.max(0, Math.floor(Number(s.gymDone)) || 0);
   s.homeDone = Math.max(0, Math.floor(Number(s.homeDone)) || 0);
   if(s.active && !(s.active.track && s.active.templateId && s.active.ex)) s.active = null;
+  if(s.active){
+    if(!s.active.exNote) s.active.exNote = {};
+    if(!s.active.skipped) s.active.skipped = {};
+  }
   /* A hand-edited or truncated file can carry a non-array under an exercise id.
      Drop those rather than letting finishSession() throw on them later. */
   if(s.active) Object.keys(s.active.ex).forEach(id => {
@@ -540,10 +611,57 @@ function field(input, dot, onval){
   };
   return input;
 }
+/* An in-app sheet instead of confirm(). The native dialog cannot be styled,
+   looks foreign inside an installed app, and on some Android builds is
+   suppressed outright, which would have made "Erase everything" fire without
+   asking. Slides up from the bottom because that is where the thumb is.
+   Returns a promise, and can carry one field. */
+function ask(opt){
+  return new Promise(resolve => {
+    const wrap = el(`
+      <div class="sheetwrap">
+        <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(opt.title)}">
+          <h3>${esc(opt.title)}</h3>
+          ${opt.body ? `<p>${esc(opt.body)}</p>` : ''}
+          ${opt.field ? `<textarea placeholder="${esc(opt.field)}">${esc(opt.value || '')}</textarea>` : ''}
+          <div class="sheetrow">
+            <button class="btn ghost" data-a="no">${esc(opt.cancelLabel || 'Cancel')}</button>
+            <button class="btn${opt.danger ? ' danger' : ''}" data-a="yes">${esc(opt.confirmLabel || 'OK')}</button>
+          </div>
+        </div>
+      </div>`);
+    const ta = wrap.querySelector('textarea');
+    const close = val => {
+      document.removeEventListener('keydown', onKey);
+      wrap.remove();
+      resolve(val);
+    };
+    const onKey = e => { if(e.key === 'Escape') close(false); };
+    wrap.querySelector('[data-a="no"]').onclick = () => close(false);
+    wrap.querySelector('[data-a="yes"]').onclick = () => close(ta ? (ta.value || true) : true);
+    wrap.onclick = e => { if(e.target === wrap) close(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    (opt.danger ? wrap.querySelector('[data-a="no"]') : (ta || wrap.querySelector('[data-a="yes"]'))).focus();
+  });
+}
+
 let toastTimer;
-function toast(msg){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+function toast(msg, undo){
+  const t = $('#toast');
+  t.textContent = msg;
+  if(undo){
+    const b = el('<button class="undo">Undo</button>');
+    b.onclick = () => { t.classList.remove('show'); undo(); };
+    t.appendChild(b);
+    t.classList.add('wide');
+  }else{
+    t.classList.remove('wide');
+  }
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), undo ? 6000 : 2200);
 }
 /* A session in history can name a template that has since been edited out of
    PROGRAM. Degrade to a stub rather than throwing and taking the Log view down. */
@@ -564,11 +682,23 @@ function lastFor(exId){
   }
   return null;
 }
+/* Sets logged before the effort buttons were replaced still carry .e, so both
+   are read. Nothing on disk was rewritten. */
 function setLine(sets){
   if(!Array.isArray(sets)) return '';
   return sets.filter(x => x && (x.w || x.r))
-    .map(x => (x.w ? x.w + ' kg' : 'bw') + ' x ' + (x.r || '?') + (x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
+    .map(x => (x.w ? x.w + ' kg' : 'bw') + ' x ' + (x.r || '?') +
+              (x.c ? ' cut' : x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
     .join('   ');
+}
+/* The last note left against this movement. Machine settings belong to the
+   machine, not to the session they were first written in. */
+function lastNoteFor(exId){
+  for(let i = store.history.length - 1; i >= 0; i--){
+    const n = store.history[i].exNote && store.history[i].exNote[exId];
+    if(n) return n;
+  }
+  return '';
 }
 
 /* ============================================================
@@ -611,8 +741,9 @@ function renderHome(app){
     resume.onclick = () => { keepAwake(true); view = 'session'; openEx = null; render(); };
     app.appendChild(resume);
     const drop = el('<button class="linkbtn" style="margin-top:10px">Discard this session</button>');
-    drop.onclick = () => {
-      if(confirm('Discard the session in progress? Nothing will be saved.')){
+    drop.onclick = async () => {
+      if(await ask({title:'Discard this session?', body:'Nothing in it will be saved.',
+                    confirmLabel:'Discard', danger:true})){
         store.active = null; save(); keepAwake(false); render();
       }
     };
@@ -620,34 +751,67 @@ function renderHome(app){
     app.appendChild(el('<div class="rule"></div>'));
   }
 
-  ['gym','home'].forEach(track => {
-    if(a && a.track === track) return;
-    const id = nextTemplateId(track);
-    const t = tmpl(track, id);
-    const n = (track === 'gym' ? store.gymDone : store.homeDone) + 1;
-    const c = cardioFor(track, n);
-    const box = el(`
+  /* Gym leads, home is a single row. That asymmetry is the truth: the home
+     block runs every day and the gym does not, and two identical heroes made
+     you read both to tell them apart while pushing the second button off the
+     bottom of the screen. */
+  if(!a || a.track !== 'gym'){
+    const n = store.gymDone + 1;
+    const t = tmpl('gym', nextTemplateId('gym'));
+    const c = cardioFor('gym', n);
+    app.appendChild(el(`
       <div class="hero fadein">
-        <div class="eyebrow">Next ${track === 'gym' ? 'gym' : 'home'} session</div>
-        <div class="num">${n}<small>${track === 'gym' ? 'GYM' : 'HOME'}</small></div>
+        <div class="eyebrow">Next gym session <span class="chip">${n}</span></div>
         <h2>${esc(t.name)}</h2>
         <p class="focus">${esc(t.focus)}</p>
-        ${c ? `<p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min at ${c.speed} km/h, ${c.incline} percent incline</p>` : ''}
+        ${c ? `<p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min &middot; ${c.speed} km/h &middot; ${c.incline}% &middot; ${esc(c.when)}</p>` : ''}
         <div class="stripe"></div>
-      </div>`);
-    app.appendChild(box);
-    const b = el(`<button class="btn ${track === 'home' ? 'ghost' : ''} fadein" style="margin-bottom:16px">Start ${track === 'gym' ? 'gym' : 'home'} session</button>`);
-    b.onclick = () => startSession(track);
+      </div>`));
+    const b = el('<button class="btn fadein">Start gym session</button>');
+    b.onclick = () => startSession('gym');
     app.appendChild(b);
-  });
+  }
 
-  const last = store.history[store.history.length - 1];
+  if(!a || a.track !== 'home'){
+    const t = tmpl('home', nextTemplateId('home'));
+    const row = el(`
+      <button class="daily fadein">
+        <span>
+          <span class="eyebrow">Daily &middot; home block ${store.homeDone + 1}</span>
+          <b>${esc(t.name)}</b>
+          <span class="sub">${t.exercises.length} items, under 20 min${homeDoneToday() ? ' &middot; done today' : ''}</span>
+        </span>
+        <span class="go">&rarr;</span>
+      </button>`);
+    row.onclick = () => startSession('home');
+    app.appendChild(row);
+  }
+
+  /* Numbers you would act on, rather than two counters repeated from above. */
+  const gym7 = sessionsInLastDays('gym', 7);
+  const since = daysSinceLast('gym');
   app.appendChild(el(`
     <div class="stats fadein">
-      <div><b>${store.gymDone}</b><span>Gym done</span></div>
-      <div><b>${store.homeDone}</b><span>Home done</span></div>
-      <div><b>${last ? fmtDate(last.finishedAt).split(' ')[0] + ' ' + fmtDate(last.finishedAt).split(' ')[1] : '&ndash;'}</b><span>Last session</span></div>
+      <div><b>${gym7}</b><span>Gym, last 7 days</span></div>
+      <div><b>${since === null ? '&ndash;' : since}</b><span>Days since gym</span></div>
+      <div><b>${homeDoneToday() ? 'Yes' : 'No'}</b><span>Home block today</span></div>
     </div>`));
+}
+
+function sessionsInLastDays(track, days){
+  const cut = Date.now() - days*864e5;
+  return store.history.filter(s => s.track === track && new Date(s.finishedAt).getTime() >= cut).length;
+}
+function daysSinceLast(track){
+  for(let i = store.history.length - 1; i >= 0; i--){
+    if(store.history[i].track === track)
+      return Math.floor((Date.now() - new Date(store.history[i].finishedAt).getTime()) / 864e5);
+  }
+  return null;
+}
+function homeDoneToday(){
+  const today = new Date().toDateString();
+  return store.history.some(s => s.track === 'home' && new Date(s.finishedAt).toDateString() === today);
 }
 
 function startSession(track){
@@ -660,7 +824,7 @@ function startSession(track){
   store.active = {
     track, num:n, templateId:id, startedAt:new Date().toISOString(),
     cardio: c ? {...c, actual:'', done:false} : {},
-    ex, note:''
+    ex, exNote:{}, skipped:{}, note:''
   };
   save();
   /* The wake lock has to be requested inside the tap that started the session:
@@ -691,7 +855,7 @@ addEventListener('visibilitychange', () => {
 /* Blank sets for an exercise, used on start and when PROGRAM gains an
    exercise while a session is already running. */
 function freshSets(exd){
-  return Array.from({length:exd.sets}, () => ({w:'',r:'',e:0,done:false}));
+  return Array.from({length:exd.sets}, () => ({w:'',r:'',e:0,c:false,done:false}));
 }
 function slotsFor(exd){
   const a = store.active;
@@ -840,15 +1004,6 @@ function renderSession(app){
     app.appendChild(card);
   });
 
-  /* note */
-  const note = el(`
-    <div class="card"><div class="pad">
-      <div class="eyebrow" style="margin-bottom:8px">Note</div>
-      <textarea placeholder="Anything worth knowing next time. Machine settings, a niggle, how it felt.">${esc(a.note)}</textarea>
-    </div></div>`);
-  note.querySelector('textarea').oninput = e => { a.note = e.target.value; saveSoon(); };
-  app.appendChild(note);
-
   /* footer */
   const foot = $('#foot');
   foot.hidden = false;
@@ -943,6 +1098,7 @@ function buildRoundBlock(b){
     shot.onload = () => shot.classList.add('ready');
     shot.onerror = () => shot.remove();
     f.appendChild(shot);
+    f.appendChild(buildExNote(exd));
     forms.appendChild(f);
   });
   head.querySelector('.form').onclick = () => forms.classList.toggle('show');
@@ -961,6 +1117,24 @@ function buildRoundBlock(b){
     block.appendChild(round);
   }
   return block;
+}
+
+/* A note against the movement rather than against the session. "Chest press
+   seat 4, pin 7" is true every week, so the last one written is offered back
+   as the starting text. */
+function buildExNote(exd){
+  const a = store.active;
+  const wrap = el(`<div class="exnote"><div class="eyebrow">Note</div></div>`);
+  const last = lastNoteFor(exd.id);
+  const ta = el(`<textarea placeholder="${esc(last || 'Machine settings, a niggle, anything worth knowing next time.')}">${esc(a.exNote[exd.id] || '')}</textarea>`);
+  ta.oninput = e => { a.exNote[exd.id] = e.target.value; saveSoon(); };
+  wrap.appendChild(ta);
+  if(last && !a.exNote[exd.id]){
+    const take = el('<button class="linkbtn">Use last time&rsquo;s note</button>');
+    take.onclick = () => { ta.value = last; a.exNote[exd.id] = last; save(); take.remove(); };
+    wrap.appendChild(take);
+  }
+  return wrap;
 }
 
 function buildExBody(exd){
@@ -985,6 +1159,7 @@ function buildExBody(exd){
   forms.appendChild(el(`<p class="cue">${esc(exd.cue)}</p>`));
   forms.appendChild(shot);
   if(exd.link) forms.appendChild(el(`<a class="demo" href="${esc(exd.link)}" target="_blank" rel="noopener">Watch the movement</a>`));
+  forms.appendChild(buildExNote(exd));
 
   const target = el(`<div class="exmeta"><span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span><button class="linkbtn form">Form</button></div>`);
   target.querySelector('.form').onclick = () => forms.classList.toggle('show');
@@ -996,7 +1171,7 @@ function buildExBody(exd){
   const actions = el('<div class="exactions"></div>');
   const addSet = el('<button class="linkbtn">Add a set</button>');
   addSet.onclick = () => {
-    const s = {w:'',r:'',e:0,done:false};
+    const s = {w:'',r:'',e:0,c:false,done:false};
     sets.push(s); save();
     actions.parentNode.insertBefore(buildSetRow(exd, s, sets.length - 1, prev), actions);
     refreshHead(exd);
@@ -1039,9 +1214,7 @@ function buildSetRow(exd, s, i, prev, opt){
         <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input data-f="r" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.r)}" placeholder="${ph('r')}" aria-label="Set ${i+1} ${esc(exd.unit || 'reps')}"></span>
         <button class="setdone" aria-pressed="${s.done}" aria-label="Set ${i+1} complete">&#10003;</button>
       </div>
-      <div class="effort">
-        ${EFFORT.map((lab,k)=>`<button aria-pressed="${s.e === k+1}" data-e="${k+1}">${lab}</button>`).join('')}
-      </div>
+      <button class="cut" aria-pressed="${!!s.c}">&#10033; Cut short</button>
     </div>`);
   const wIn = row.querySelector('[data-f="w"]');
   const rIn = row.querySelector('[data-f="r"]');
@@ -1064,9 +1237,19 @@ function buildSetRow(exd, s, i, prev, opt){
     b.onpointerup = b.onpointerleave = b.onpointercancel = stop;
   });
 
+  /* Every working set is meant to go to failure, so Easy/OK/Hard/Max answered
+     "Max" almost every time and cost a whole row per set. The one bit worth
+     recording is when a set did NOT go the distance. It only appears once the
+     set is ticked, which is when you would know. */
+  row.querySelector('.cut').onclick = e => {
+    s.c = !s.c;
+    e.currentTarget.setAttribute('aria-pressed', !!s.c);
+    save(); refreshHead(exd);
+  };
   row.querySelector('.setdone').onclick = e => {
     s.done = !s.done;
     e.currentTarget.setAttribute('aria-pressed', s.done);
+    row.classList.toggle('done', s.done);
     if(s.done){
       buzz(12);
       const rest = restFor(exd, opt.lastInGroup !== false);
@@ -1078,15 +1261,7 @@ function buildSetRow(exd, s, i, prev, opt){
     save(); refreshHead(exd);
     if(s.done) advanceFrom(exd, i);
   };
-  row.querySelectorAll('.effort button').forEach(b => {
-    b.onclick = () => {
-      const v = Number(b.dataset.e);
-      s.e = (s.e === v) ? 0 : v;
-      row.querySelectorAll('.effort button').forEach(x =>
-        x.setAttribute('aria-pressed', Number(x.dataset.e) === s.e));
-      save();
-    };
-  });
+  if(s.done) row.classList.add('done');
   return row;
 }
 
@@ -1109,17 +1284,35 @@ function advanceFrom(exd, i){
   bringIntoWorkZone(cardFor(next.id));
 }
 
-function finishSession(){
+async function finishSession(){
   const a = store.active;
-  const logged = Object.values(a.ex).some(sets => sets.some(s => s.w || s.r)) || a.cardio.done || a.cardio.actual;
-  if(!logged && !confirm('Nothing is logged in this session. Finish it anyway?')) return;
+  const logged = Object.values(a.ex).some(sets => Array.isArray(sets) && sets.some(s => s.w || s.r))
+                 || a.cardio.done || a.cardio.actual;
+  if(!logged && !await ask({title:'Nothing is logged', body:'Finish this session anyway?',
+                            confirmLabel:'Finish', danger:true})) return;
+  /* The session note is asked for here rather than sitting at the bottom of
+     the working list, because this is the moment you have something to say.
+     Machine settings live on the exercise, not on the session. */
+  const note = await ask({
+    title:'Finish session',
+    body:'Anything worth knowing next week? Sleep, food, a niggle, how it went.',
+    field:'Optional', value:a.note, confirmLabel:'Log it', cancelLabel:'Back'
+  });
+  if(note === false) return;
+  a.note = typeof note === 'string' ? note : a.note;
   a.finishedAt = new Date().toISOString();
   store.history.push(a);
   if(a.track === 'gym') store.gymDone++; else store.homeDone++;
   store.active = null;
   stopTimer(); keepAwake(false); save();
   buzz([30,50,30,50,80]);
-  toast('Session ' + a.num + ' logged');
+  toast('Session ' + a.num + ' logged', () => {
+    /* Undo beats a confirmation dialog for anything reversible. */
+    store.active = store.history.pop();
+    delete store.active.finishedAt;
+    if(store.active.track === 'gym') store.gymDone--; else store.homeDone--;
+    save(); view = 'session'; render();
+  });
   view = 'home'; render();
 }
 
@@ -1217,7 +1410,8 @@ function renderHistory(app){
       Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
       const lines = [...names].map(([id, name]) => {
         const line = setLine(s.ex[id] || []);
-        return name + (line ? '\n  ' + line : '\n  not logged');
+        const n = s.exNote && s.exNote[id];
+        return name + (line ? '\n  ' + line : '\n  not logged') + (n ? '\n  " ' + n : '');
       });
       const c = s.cardio;
       const walk = c.speed
@@ -1227,6 +1421,17 @@ function renderHistory(app){
     };
     app.appendChild(item);
   });
+}
+
+/* A quiet line, not a modal and not red. It only has something to say when
+   there is genuinely something to say. */
+function exportNudge(){
+  if(!store.history.length) return 'Nothing to export yet.';
+  if(!store.lastExport) return 'Never exported. ' + store.history.length + ' session(s) live only on this phone.';
+  const days = Math.floor((Date.now() - new Date(store.lastExport).getTime()) / 864e5);
+  const since = store.history.filter(s => new Date(s.finishedAt) > new Date(store.lastExport)).length;
+  if(days >= 30 || since >= 10) return 'Last export ' + days + ' day(s) ago, ' + since + ' session(s) since.';
+  return 'Last export ' + (days === 0 ? 'today' : days + ' day(s) ago') + '.';
 }
 
 function renderData(app){
@@ -1239,29 +1444,37 @@ function renderData(app){
         <button class="btn small ghost" id="imp">Import</button>
       </div>
       <input type="file" id="file" accept="application/json" hidden>
+      <p class="muted" style="font-size:var(--t-sub);margin:12px 0 0">${exportNudge()}</p>
     </div></div>`));
   $('#exp').onclick = () => {
     const blob = new Blob([JSON.stringify(store,null,2)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'sessions-' + new Date().toISOString().slice(0,10) + '.json';
+    /* Minutes in the name, so two exports on one day do not collide. */
+    a.download = 'sessions-' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-') + '.json';
     a.click(); URL.revokeObjectURL(a.href);
+    store.lastExport = new Date().toISOString(); save(); render();
   };
   $('#imp').onclick = () => $('#file').click();
   $('#file').onchange = e => {
     const f = e.target.files[0]; if(!f) return;
     e.target.value = '';   /* so picking the same file twice still fires */
     const r = new FileReader();
-    r.onload = () => {
+    r.onload = async () => {
       try{
         const data = JSON.parse(r.result);
         if(!Array.isArray(data.history)) throw new Error('bad file');
         if((Number(data.version) || 0) > SCHEMA) throw new Error('newer');
         /* Import replaces, it does not merge. Say so before doing it: the two
            buttons sit next to each other and there is no undo. */
-        if(store.history.length && !confirm(
-             'Replace the ' + store.history.length + ' session(s) on this phone with the ' +
-             data.history.length + ' in this file? This cannot be undone.')) return;
+        const incoming = data.history.length;
+        const go = !store.history.length || await ask({
+          title:'Replace everything?',
+          body:'This phone has ' + store.history.length + ' session(s). The file has ' +
+               incoming + '. Importing replaces what is here and cannot be undone.',
+          confirmLabel:'Replace', danger:true
+        });
+        if(!go) return;
         store = adopt(data); save();
         toast('Imported ' + store.history.length + ' sessions');
         view = 'home'; render();
@@ -1274,40 +1487,47 @@ function renderData(app){
     r.readAsText(f);
   };
 
+  /* Counters, rotation and erase are all things you touch once, so they fold
+     away behind one disclosure instead of sitting level with Backup. */
   app.appendChild(el(`
-    <div class="card"><div class="pad">
+    <details class="card"><summary>Programme and counters</summary><div class="pad">
       <div class="eyebrow">Session counters</div>
       <p class="mono" style="margin:8px 0 12px">Gym ${store.gymDone} &nbsp; Home ${store.homeDone}</p>
-      <p class="muted" style="font-size:13px;margin:0 0 12px">The counter picks the next workout in the rotation and sets the walk length. Adjust it if you started mid programme.</p>
+      <p class="muted" style="font-size:var(--t-sub);margin:0 0 12px">The counter picks the next workout in the rotation. Adjust it if you started mid programme.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn small ghost" id="gplus">Gym +1</button>
         <button class="btn small ghost" id="gminus">Gym -1</button>
         <button class="btn small ghost" id="hplus">Home +1</button>
         <button class="btn small ghost" id="hminus">Home -1</button>
       </div>
-    </div></div>`));
+      <div class="eyebrow" style="margin-top:18px">Rotation</div>
+      <p class="mono" style="font-size:var(--t-sub);margin:8px 0 0;line-height:1.8">
+        Gym: ${PROGRAM.gym.order.map(id => esc(tmpl('gym',id).name)).join(' &rarr; ')} &rarr; repeat<br>
+        Home: ${PROGRAM.home.order.map(id => esc(tmpl('home',id).name)).join(', ')}, daily
+      </p>
+      <p class="muted" style="font-size:var(--t-sub);margin-top:12px">To change exercises, edit the PROGRAM block at the top of index.html. History is kept by exercise id, so keep an id the same if you rename the exercise.</p>
+      <div class="eyebrow" style="margin-top:18px">This phone</div>
+      <p class="mono" style="font-size:var(--t-sub);margin:8px 0 0" id="storageLine">Schema v${store.version} &middot; ${store.history.length} session(s)</p>
+      <div style="margin-top:16px"><button class="btn small danger" id="erase">Erase everything</button></div>
+    </div></details>`));
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(e => {
+      const l = $('#storageLine');
+      if(l && e.usage != null) l.textContent += ' · ' + Math.round(e.usage/1024) + ' kB used';
+    }).catch(() => {});
+  }
   $('#gplus').onclick = () => { store.gymDone++; save(); render(); };
   $('#gminus').onclick = () => { store.gymDone = Math.max(0, store.gymDone-1); save(); render(); };
   $('#hplus').onclick = () => { store.homeDone++; save(); render(); };
   $('#hminus').onclick = () => { store.homeDone = Math.max(0, store.homeDone-1); save(); render(); };
 
-  app.appendChild(el(`
-    <div class="card"><div class="pad">
-      <div class="eyebrow">Rotation</div>
-      <p class="mono" style="font-size:13px;margin:10px 0 0;line-height:1.8">
-        Gym: ${PROGRAM.gym.order.map(id => tmpl('gym',id).name).join(' &rarr; ')} &rarr; repeat<br>
-        Home: ${PROGRAM.home.order.map(id => tmpl('home',id).name).join(', ')}
-      </p>
-      <p class="muted" style="font-size:13px;margin-top:12px">To change exercises, edit the PROGRAM block at the top of index.html. History is kept by exercise id, so keep an id the same if you rename the exercise.</p>
-    </div></div>`));
-
-  const reset = el('<button class="linkbtn" style="color:var(--red)">Erase everything</button>');
-  reset.onclick = () => {
-    if(confirm('Erase all sessions and counters? This cannot be undone.')){
+  $('#erase').onclick = async () => {
+    if(await ask({title:'Erase everything?',
+                  body:'All ' + store.history.length + ' session(s) and both counters. This cannot be undone, and there is no backup unless you have exported one.',
+                  confirmLabel:'Erase', danger:true})){
       store = blank(); save(); view = 'home'; render();
     }
   };
-  app.appendChild(reset);
 }
 
 document.querySelectorAll('.navlinks button').forEach(b => {
