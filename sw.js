@@ -1,7 +1,7 @@
 /* Sessions service worker.
    Bump VERSION whenever a cached asset changes, or installed phones
    keep serving the old copy. */
-const VERSION = 'v4';
+const VERSION = 'v5';
 const SHELL = 'shell-' + VERSION;
 const RUNTIME = 'runtime-' + VERSION;
 
