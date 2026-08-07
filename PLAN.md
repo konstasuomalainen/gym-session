@@ -21,8 +21,8 @@ Branch `refine-phase-1`, not merged to `main` (which deploys straight to Pages).
 | 1 — stop the app fighting you | **shipped** | `290a336` |
 | 2 — make it your programme again | **shipped** | `923d77c` |
 | 3a — design system and dark mode | **shipped** | `b0c69fd` |
-| 3b — the working screen | not started | |
-| 4 — calm and clutter *(schema 2)* | not started | |
+| 3b — the working screen | **shipped** | `12d6164` |
+| 4 — calm and clutter *(schema 2)* | **shipped** | `1501c74` |
 | 5 — become a reader | not started | |
 | 6 — body data | awaiting §16.1 | |
 
@@ -33,26 +33,46 @@ Measured before → after, 360 × 640:
 | Scroll jump on opening an exercise | 1285 px | **0 px** |
 | Tapped exercise ends up | 153 px below the screen | stays put |
 | Focus after toggling | `BODY` (keyboard closed) | `INPUT` |
+| Taps to reach round 3 of the giant set | 6 | **0** — all nine sets on screen |
+| Rest timers fired per giant set | 9 | **3**, one per round |
+| Controls per set row | 4 effort + tick | 1 tick + a cut-short that appears once ticked |
 | Tick button | 42 px | 52 px |
 | Nav / text button hit area | 25–26 px | 44 px |
 | Unit labels (`KG`, `REPS`) | 9 px | 12 px |
 | Set line | 12 px | 15 px |
-| Hero counter | 88 px | 52 px |
+| Rest countdown | 20 px in a corner | 42 px across the bar |
+| Hero counter | 88 px | 52 px chip |
+| Home action vs the fold | 105 px **below** | 158 px **above** |
 | Worst contrast, light | 3.5:1 (fails AA) | **5.02:1** |
 | Worst contrast, dark | no dark theme | **5.04:1** |
 | Gym exercises | 5 (no face pull) | 6 |
 | Home exercises | 4, one not in the programme | 8, priority order |
 | Dead kg fields in the home block | 16 | 0 |
 
-Two corrections to this plan, found by measuring during implementation:
+### Corrections to this plan, found by measuring during implementation
 
 1. **§7.2 said darkening `--muted` to `#6B6253` was optional headroom.** It was neither
    optional nor sufficient: the original `#7C7364` measured 3.5:1 on the floor and 4.11:1
    on a card, both failing AA, and `#6B6253` still fails on the floor at 4.49:1. Shipped
    `#635B4C`, the lightest value clearing 4.5:1 on all three surfaces.
-2. **§8.1 assumed shrinking the hero fixed the fold.** It does not on its own —
-   `Start home session` still ends 77 px below a 640 px viewport. The compact home row is
-   what actually fixes it, and that is Phase 4.
+2. **§8.1 assumed shrinking the hero fixed the fold.** It did not on its own — it left the
+   home action 77 px below a 640 px viewport. The compact daily row is what fixed it.
+3. **§3 decision 2 was applied more widely than written.** The experience rule (form folds
+   after 3 logged sessions) was specified for the round block, but the same argument holds
+   for an opened accordion card, so it applies there too. Opening a familiar exercise now
+   lands on "Last time" and the numbers.
+4. **§9.1's 1.25 kg long-press chip was dropped.** Hold-to-repeat on the 2.5 kg stepper
+   covers the real case, and a step-size toggle is another control on the most crowded row
+   in the app for something typing already handles.
+5. **§4.4's contextual footer stays rejected**, per §3 decision 1. The footer is Timer +
+   Finish; while a rest runs the timer takes the bar and Finish is hidden, which gets the
+   reachability without inventing a "current set".
+
+### Carried into Phase 5
+
+- **§4.8 skip** — the `skipped` field ships in schema 2 and nothing writes it yet. The UI
+  belongs next to the trend in §11, so that a skipped week reads as skipped rather than as
+  a strength drop.
 
 ## Contents
 
