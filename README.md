@@ -20,7 +20,8 @@ after the first load.
 - An exercise can be marked skipped. It reads as skipped rather than as missing, and it is left out of that movement's trend.
 - A logged session can be reopened and corrected from the Log.
 - Opening an exercise shows a start and end frame of the movement.
-- Everything autosaves on every keystroke. Closing the tab mid session loses nothing.
+- Weight and steps go in one row a day on Now. The seven day rolling average is the only thing worked out from them. No goal weight, no target, no streak, no reminder.
+- Everything autosaves as you type. Closing the tab mid session loses nothing.
 
 ## Changing the routine
 

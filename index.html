@@ -149,6 +149,15 @@ header{
 .daily b{display:block;font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;line-height:1;margin:3px 0 2px}
 .daily .sub{font-size:var(--t-sub);color:var(--muted)}
 .daily .go{margin-left:auto;font-size:24px;color:var(--blue)}
+/* Weight and steps. No target, no goal, no streak, nothing red. */
+.card.body{margin-top:14px}
+.bodygrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 0}
+.bodygrid input{
+  width:100%;font-family:var(--mono);font-size:var(--t-lead);font-weight:600;text-align:center;
+  padding:13px 4px;border:2px solid var(--hair);border-radius:var(--r);background:var(--chalk);color:var(--ink);
+}
+.bodygrid input:focus{border-color:var(--blue)}
+.card.body .avg{margin:10px 0 0;font-size:var(--t-sub);color:var(--muted);line-height:1.5}
 
 /* buttons */
 .btn{
@@ -509,10 +518,10 @@ const EFFORT = ['Easy','OK','Hard','Max'];
    Storage
    ============================================================ */
 const KEY = 'sessions.v1';
-const SCHEMA = 2;
+const SCHEMA = 3;
 let store = null;
 
-function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[], lastExport:null}; }
+function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[], body:[], lastExport:null}; }
 
 /* Bring a stored object of any older shape up to SCHEMA.
    To change the shape: bump SCHEMA, then append one block below.
@@ -535,6 +544,11 @@ function migrate(data){
     if(data.lastExport === undefined) data.lastExport = null;
     v = 2;
   }
+  if(v === 2){
+    /* One row a day for weight and steps. */
+    data.body = Array.isArray(data.body) ? data.body : [];
+    v = 3;
+  }
   data.version = v;
   return data;
 }
@@ -543,6 +557,8 @@ function migrate(data){
 function adopt(data){
   const s = Object.assign(blank(), migrate(data));
   if(!Array.isArray(s.history)) s.history = [];
+  if(!Array.isArray(s.body)) s.body = [];
+  s.body = s.body.filter(b => b && b.date);
   s.history = s.history.filter(x => x && x.track && x.templateId);
   s.history.forEach(x => {
     if(!x.ex) x.ex = {};
@@ -902,6 +918,8 @@ function renderHome(app){
     app.appendChild(row);
   }
 
+  app.appendChild(buildBodyRow());
+
   /* Numbers you would act on, rather than two counters repeated from above. */
   const gym7 = sessionsInLastDays('gym', 7);
   const since = daysSinceLast('gym');
@@ -911,6 +929,59 @@ function renderHome(app){
       <div><b>${since === null ? '&ndash;' : since}</b><span>Days since gym</span></div>
       <div><b>${homeDoneToday() ? 'Yes' : 'No'}</b><span>Home block today</span></div>
     </div>`));
+}
+
+/* Weight and steps. One row a day, overwritable, and the seven day rolling
+   average is the only thing derived from them. Deliberately no target line,
+   no goal weight, no streak, no reminder and nothing that can go red: the
+   programme owns what the number means, this only owns recording it. */
+function todayKey(){
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+function bodyFor(date){ return store.body.find(b => b.date === date) || null; }
+function setBody(field, value){
+  let e = bodyFor(todayKey());
+  if(!e){
+    e = {date: todayKey(), kg:'', steps:''};
+    store.body.push(e);
+    store.body.sort((a, b) => a.date < b.date ? -1 : 1);
+  }
+  e[field] = value;
+  saveSoon();
+}
+function rollingKg(){
+  const cut = Date.now() - 7*864e5;
+  const vals = store.body
+    .filter(b => b.kg && new Date(b.date + 'T12:00:00').getTime() >= cut)
+    .map(b => Number(b.kg))
+    .filter(v => !isNaN(v) && v > 0);
+  if(!vals.length) return null;
+  return {avg: vals.reduce((a, b) => a + b, 0) / vals.length, n: vals.length};
+}
+
+function buildBodyRow(){
+  const t = bodyFor(todayKey()) || {kg:'', steps:''};
+  const card = el(`
+    <div class="card body fadein"><div class="pad">
+      <div class="eyebrow">Today</div>
+      <div class="bodygrid">
+        <span class="unit" data-u="KG"><input data-b="kg" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(t.kg)}" aria-label="Weight today in kilos"></span>
+        <span class="unit" data-u="STEPS"><input data-b="steps" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(t.steps)}" aria-label="Steps today"></span>
+      </div>
+      <p class="avg"></p>
+    </div></div>`);
+  const avg = card.querySelector('.avg');
+  const paint = () => {
+    const r = rollingKg();
+    avg.textContent = r
+      ? '7 day average ' + r.avg.toFixed(1) + ' kg, from ' + r.n + ' reading' + (r.n === 1 ? '' : 's')
+      : 'Weigh in the same way each morning. A single day means nothing; the seven day average is the number.';
+  };
+  paint();
+  field(card.querySelector('[data-b="kg"]'), true, v => { setBody('kg', v); paint(); });
+  field(card.querySelector('[data-b="steps"]'), false, v => setBody('steps', v));
+  return card;
 }
 
 function sessionsInLastDays(track, days){

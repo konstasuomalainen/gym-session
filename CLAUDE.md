@@ -69,6 +69,17 @@ They are deliberately absent from `ASSETS` in `sw.js`. The runtime handler cache
 the first time it is displayed, which keeps the install step from depending on files that
 may not exist yet.
 
+## Weight and steps
+
+`store.body` is one row per day, `{date, kg, steps}`, keyed by local date. The Now screen
+edits today's row and nothing else writes it.
+
+The only figure derived from it is the seven day rolling average of `kg`. That restraint is
+deliberate and comes from the training programme, which has an explicit boundary about
+logging producing guilt rather than data. **Do not add** a goal weight, a target line, a
+projection, a streak, a reminder to weigh in, or any state that can go red. If a number
+here ever needs interpreting, that belongs in the programme, not in the app.
+
 ## Stored data shape
 
 `SCHEMA` is the version of the stored object. Any change to the shape of what `blank()`
