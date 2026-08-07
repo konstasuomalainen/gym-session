@@ -149,9 +149,7 @@ header{
 .setgrid input{
   width:100%;font-family:var(--mono);font-size:19px;font-weight:600;text-align:center;
   padding:10px 4px;border:2px solid var(--hair);border-radius:var(--r);background:var(--chalk);color:var(--ink);
-  -moz-appearance:textfield;
 }
-.setgrid input::-webkit-outer-spin-button,.setgrid input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
 .setgrid input:focus{border-color:var(--blue)}
 .unit{position:relative}
 .unit::after{content:attr(data-u);position:absolute;right:7px;bottom:4px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em}
@@ -313,6 +311,11 @@ function adopt(data){
   s.gymDone = Math.max(0, Math.floor(Number(s.gymDone)) || 0);
   s.homeDone = Math.max(0, Math.floor(Number(s.homeDone)) || 0);
   if(s.active && !(s.active.track && s.active.templateId && s.active.ex)) s.active = null;
+  /* A hand-edited or truncated file can carry a non-array under an exercise id.
+     Drop those rather than letting finishSession() throw on them later. */
+  if(s.active) Object.keys(s.active.ex).forEach(id => {
+    if(!Array.isArray(s.active.ex[id])) delete s.active.ex[id];
+  });
   if(s.active && !s.active.cardio){
     s.active.cardio = {...cardioFor(s.active.track, s.active.num || 1), actual:'', done:false};
   }
@@ -336,9 +339,20 @@ function keepCorrupt(raw){
   try{ localStorage.setItem(KEY + '.corrupt.' + Date.now(), raw); }catch(e){}
 }
 function save(){
+  clearTimeout(saveTimer); saveTimer = null;
   try{ localStorage.setItem(KEY, JSON.stringify(store)); }
   catch(e){ toast('Could not save to this browser'); }
 }
+/* Typing calls this on every keystroke, and every call stringifies the whole
+   store, which grows with history. Taps still use save() and write at once.
+   Flushed on hide, so a backgrounded phone cannot lose the last character. */
+let saveTimer = null;
+function saveSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 250);
+}
+addEventListener('visibilitychange', () => { if(document.hidden && saveTimer) save(); });
+addEventListener('pagehide', () => { if(saveTimer) save(); });
 
 /* ============================================================
    Helpers
@@ -350,6 +364,34 @@ function fmtDate(iso){
   const d = new Date(iso);
   return d.toLocaleDateString(undefined,{day:'numeric',month:'short'}) + ' ' +
          d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
+}
+/* Number fields are type=text, not type=number. A browser running an English
+   locale with a Finnish keyboard rejects the comma outright, so 22,5 is stored
+   as 225, and assigning a value containing a comma blanks the field whatever
+   the locale. Take the raw text and normalise it here instead. */
+function num(v, dot){
+  v = String(v).replace(',', '.').replace(dot ? /[^0-9.]/g : /[^0-9]/g, '');
+  if(!dot) return v;
+  const i = v.indexOf('.');
+  return i < 0 ? v : v.slice(0, i+1) + v.slice(i+1).replace(/\./g, '');
+}
+/* Every number field behaves the same: normalise on input, select on focus so
+   typing replaces instead of appending, and Enter moves to the next one. */
+function field(input, dot, onval){
+  input.onfocus = e => e.target.select();
+  input.oninput = e => {
+    const clean = num(e.target.value, dot);
+    if(clean !== e.target.value) e.target.value = clean;
+    onval(clean);
+  };
+  input.onkeydown = e => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('#app input')];
+    const next = all[all.indexOf(e.target) + 1];
+    if(next) next.focus(); else e.target.blur();
+  };
+  return input;
 }
 let toastTimer;
 function toast(msg){
@@ -386,6 +428,7 @@ function setLine(sets){
    Views
    ============================================================ */
 let view = 'home';
+let renderedView = null;
 let openEx = null;
 
 function render(){
@@ -399,7 +442,10 @@ function render(){
   else if(view === 'session') renderSession(app);
   else if(view === 'history') renderHistory(app);
   else renderData(app);
-  window.scrollTo(0,0);
+  /* Only a change of view returns to the top. Opening an exercise, adding a set
+     and copying last time all edit the page in place and must not move it. */
+  if(view !== renderedView) window.scrollTo(0,0);
+  renderedView = view;
 }
 
 function renderHome(app){
@@ -415,12 +461,12 @@ function renderHome(app){
         <div class="stripe"></div>
       </div>`));
     const resume = el('<button class="btn fadein">Resume session</button>');
-    resume.onclick = () => { view = 'session'; openEx = null; render(); };
+    resume.onclick = () => { keepAwake(true); view = 'session'; openEx = null; render(); };
     app.appendChild(resume);
     const drop = el('<button class="linkbtn" style="margin-top:10px">Discard this session</button>');
     drop.onclick = () => {
       if(confirm('Discard the session in progress? Nothing will be saved.')){
-        store.active = null; save(); render();
+        store.active = null; save(); keepAwake(false); render();
       }
     };
     app.appendChild(drop);
@@ -469,8 +515,30 @@ function startSession(track){
     ex, note:''
   };
   save();
-  view = 'session'; openEx = t.exercises[0].id; render();
+  /* The wake lock has to be requested inside the tap that started the session:
+     iOS only grants it from a user gesture. */
+  keepAwake(true);
+  /* A template can legitimately be empty while PROGRAM is being edited. */
+  view = 'session'; openEx = t.exercises.length ? t.exercises[0].id : null; render();
 }
+
+/* Keep the screen on for the length of a session. Silently does nothing where
+   the API is missing. The lock drops when the tab is hidden, so it is taken
+   again on the way back. */
+let wake = null;
+async function keepAwake(on){
+  try{
+    if(on){
+      if(!wake && 'wakeLock' in navigator){
+        wake = await navigator.wakeLock.request('screen');
+        wake.addEventListener('release', () => { wake = null; });
+      }
+    }else if(wake){ wake.release(); wake = null; }
+  }catch(e){}
+}
+addEventListener('visibilitychange', () => {
+  if(!document.hidden && view === 'session' && store && store.active) keepAwake(true);
+});
 
 /* Blank sets for an exercise, used on start and when PROGRAM gains an
    exercise while a session is already running. */
@@ -516,7 +584,7 @@ function renderSession(app){
         </div>
         <div class="setgrid">
           <span class="idx"></span>
-          <span class="unit" data-u="MIN DONE"><input type="number" inputmode="decimal" id="cardioAct" placeholder="${c.minutes}" value="${c.actual}"></span>
+          <span class="unit" data-u="MIN DONE"><input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" id="cardioAct" placeholder="${c.minutes}" value="${esc(c.actual)}"></span>
           <span class="muted" style="font-size:13px">Log what you actually walked</span>
           <button class="setdone" id="cardioDone" aria-pressed="${c.done}">&#10003;</button>
         </div>
@@ -525,7 +593,7 @@ function renderSession(app){
   const walkShot = cardio.querySelector('.shot');
   walkShot.onload = () => walkShot.classList.add('ready');
   walkShot.onerror = () => walkShot.remove();
-  cardio.querySelector('#cardioAct').oninput = e => { a.cardio.actual = e.target.value; save(); };
+  field(cardio.querySelector('#cardioAct'), true, v => { a.cardio.actual = v; saveSoon(); });
   cardio.querySelector('#cardioDone').onclick = e => {
     a.cardio.done = !a.cardio.done;
     e.currentTarget.setAttribute('aria-pressed', a.cardio.done);
@@ -543,84 +611,20 @@ function renderSession(app){
     const sets = slotsFor(exd);
     const done = exComplete(exd.id);
     const isOpen = openEx === exd.id;
-    const card = el(`<div class="ex ${done ? 'done' : ''}"></div>`);
+    const card = el(`<div class="ex ${done ? 'done' : ''}" data-ex="${esc(exd.id)}"></div>`);
 
     const summary = sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
     const head = el(`
-      <button class="exhead">
+      <button class="exhead" aria-expanded="${isOpen}">
         <span class="tick">${done ? '&#10003;' : ''}</span>
         <span>
           <h3>${esc(exd.name)}</h3>
           <span class="sub">${esc(summary)}</span>
         </span>
       </button>`);
-    head.onclick = () => { openEx = isOpen ? null : exd.id; render(); };
+    head.onclick = () => toggleEx(exd.id);
     card.appendChild(head);
-
-    if(isOpen){
-      const body = el('<div class="exbody"></div>');
-
-      /* Start and end frames, looked up by exercise id. There is no image
-         field in PROGRAM on purpose: drop img/<id>.png in and it appears.
-         Not lazy: only one exercise body exists at a time, and lazy would
-         defer the error handler that hides the frame when there is no file. */
-      const shot = el(`<img class="shot" src="img/${encodeURIComponent(exd.id)}.png" alt="">`);
-      shot.onload = () => shot.classList.add('ready');
-      shot.onerror = () => shot.remove();
-      body.appendChild(shot);
-
-      const prev = lastFor(exd.id);
-      if(prev) body.appendChild(el(`<div class="last">Last time: ${esc(setLine(prev.sets))}</div>`));
-      body.appendChild(el(`<p class="cue">${esc(exd.cue)} <span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span></p>`));
-      if(exd.link) body.appendChild(el(`<a class="demo" href="${esc(exd.link)}" target="_blank" rel="noopener">Watch the movement</a>`));
-
-      sets.forEach((s, i) => {
-        const row = el(`
-          <div class="setrow">
-            <div class="setgrid">
-              <span class="idx">${i+1}</span>
-              <span class="unit" data-u="KG"><input type="number" inputmode="decimal" step="0.5" value="${s.w}" placeholder="${prev && prev.sets[i] && prev.sets[i].w ? prev.sets[i].w : ''}"></span>
-              <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input type="number" inputmode="numeric" value="${s.r}" placeholder="${prev && prev.sets[i] && prev.sets[i].r ? prev.sets[i].r : ''}"></span>
-              <button class="setdone" aria-pressed="${s.done}">&#10003;</button>
-            </div>
-            <div class="effort">
-              ${EFFORT.map((lab,k)=>`<button aria-pressed="${s.e === k+1}" data-e="${k+1}">${lab}</button>`).join('')}
-            </div>
-          </div>`);
-        const [wIn, rIn] = row.querySelectorAll('input');
-        wIn.oninput = e => { s.w = e.target.value; save(); };
-        rIn.oninput = e => { s.r = e.target.value; save(); };
-        row.querySelector('.setdone').onclick = e => {
-          s.done = !s.done;
-          e.currentTarget.setAttribute('aria-pressed', s.done);
-          if(s.done) startTimer(90);
-          save(); updateHeadState(card, exd.id);
-        };
-        row.querySelectorAll('.effort button').forEach(b => {
-          b.onclick = () => {
-            const v = Number(b.dataset.e);
-            s.e = (s.e === v) ? 0 : v;
-            row.querySelectorAll('.effort button').forEach(x =>
-              x.setAttribute('aria-pressed', Number(x.dataset.e) === s.e));
-            save();
-          };
-        });
-        body.appendChild(row);
-      });
-
-      const actions = el('<div class="exactions"></div>');
-      const addSet = el('<button class="linkbtn">Add a set</button>');
-      addSet.onclick = () => { sets.push({w:'',r:'',e:0,done:false}); save(); render(); };
-      const copyLast = el('<button class="linkbtn" style="margin-left:auto">Copy last time</button>');
-      copyLast.onclick = () => {
-        if(!prev) return toast('No previous data for this one yet');
-        sets.forEach((s,i) => { if(prev.sets[i]){ s.w = prev.sets[i].w; s.r = prev.sets[i].r; } });
-        save(); render();
-      };
-      actions.appendChild(addSet); actions.appendChild(copyLast);
-      body.appendChild(actions);
-      card.appendChild(body);
-    }
+    if(isOpen){ card.classList.add('open'); card.appendChild(buildExBody(exd)); }
     app.appendChild(card);
   });
 
@@ -630,7 +634,7 @@ function renderSession(app){
       <div class="eyebrow" style="margin-bottom:8px">Note</div>
       <textarea placeholder="Anything worth knowing next time. Machine settings, a niggle, how it felt.">${esc(a.note)}</textarea>
     </div></div>`);
-  note.querySelector('textarea').oninput = e => { a.note = e.target.value; save(); };
+  note.querySelector('textarea').oninput = e => { a.note = e.target.value; saveSoon(); };
   app.appendChild(note);
 
   /* footer */
@@ -642,10 +646,132 @@ function renderSession(app){
   paintTimer();
 }
 
-function updateHeadState(card, exId){
-  const done = exComplete(exId);
+function cardFor(exId){ return document.querySelector('.ex[data-ex="' + CSS.escape(exId) + '"]'); }
+
+/* The head carries the tick and the set line. Both change as you log, and
+   neither is worth a re-render. */
+function refreshHead(exd){
+  const card = cardFor(exd.id); if(!card) return;
+  const sets = store.active.ex[exd.id] || [];
+  const done = exComplete(exd.id);
   card.classList.toggle('done', done);
   card.querySelector('.tick').innerHTML = done ? '&#10003;' : '';
+  card.querySelector('.sub').textContent =
+    sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
+}
+
+/* Open or close an exercise by swapping one node. This used to call render(),
+   which rebuilt the page and scrolled it to the top: on a phone that put the
+   exercise you had just tapped below the bottom of the screen. Anchoring on
+   the head keeps the tapped row exactly where your thumb left it. */
+function toggleEx(exId){
+  const a = store.active; if(!a) return;
+  const t = tmpl(a.track, a.templateId);
+  const target = cardFor(exId); if(!target) return;
+  const before = target.querySelector('.exhead').getBoundingClientRect().top;
+
+  const open = document.querySelector('.ex.open');
+  if(open){
+    const body = open.querySelector('.exbody');
+    if(body) body.remove();
+    open.classList.remove('open');
+    open.querySelector('.exhead').setAttribute('aria-expanded', 'false');
+  }
+
+  if(openEx === exId){
+    openEx = null;
+  }else{
+    const exd = t.exercises.find(e => e.id === exId);
+    if(exd){
+      openEx = exId;
+      target.classList.add('open');
+      target.querySelector('.exhead').setAttribute('aria-expanded', 'true');
+      target.appendChild(buildExBody(exd));
+    }
+  }
+
+  const after = target.querySelector('.exhead').getBoundingClientRect().top;
+  if(after !== before) window.scrollBy(0, after - before);
+}
+
+function buildExBody(exd){
+  const sets = slotsFor(exd);
+  const prev = lastFor(exd.id);
+  const body = el('<div class="exbody"></div>');
+
+  /* Start and end frames, looked up by exercise id. There is no image
+     field in PROGRAM on purpose: drop img/<id>.png in and it appears.
+     Not lazy: only one exercise body exists at a time, and lazy would
+     defer the error handler that hides the frame when there is no file. */
+  const shot = el(`<img class="shot" src="img/${encodeURIComponent(exd.id)}.png" alt="${esc(exd.name)}: start position on the left, end position on the right">`);
+  shot.onload = () => shot.classList.add('ready');
+  shot.onerror = () => shot.remove();
+  body.appendChild(shot);
+
+  if(prev) body.appendChild(el(`<div class="last">Last time: ${esc(setLine(prev.sets))}</div>`));
+  body.appendChild(el(`<p class="cue">${esc(exd.cue)} <span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span></p>`));
+  if(exd.link) body.appendChild(el(`<a class="demo" href="${esc(exd.link)}" target="_blank" rel="noopener">Watch the movement</a>`));
+
+  sets.forEach((s, i) => body.appendChild(buildSetRow(exd, s, i, prev)));
+
+  const actions = el('<div class="exactions"></div>');
+  const addSet = el('<button class="linkbtn">Add a set</button>');
+  addSet.onclick = () => {
+    const s = {w:'',r:'',e:0,done:false};
+    sets.push(s); save();
+    actions.parentNode.insertBefore(buildSetRow(exd, s, sets.length - 1, prev), actions);
+    refreshHead(exd);
+  };
+  const copyLast = el('<button class="linkbtn" style="margin-left:auto">Copy last time</button>');
+  copyLast.onclick = () => {
+    if(!prev) return toast('No previous data for this one yet');
+    sets.forEach((s,i) => { if(prev.sets[i]){ s.w = prev.sets[i].w; s.r = prev.sets[i].r; } });
+    save();
+    /* Write straight into the live fields. Re-rendering would move the page. */
+    body.querySelectorAll('.setrow').forEach((row, i) => {
+      const ins = row.querySelectorAll('input');
+      if(sets[i]){ ins[0].value = sets[i].w; ins[1].value = sets[i].r; }
+    });
+    refreshHead(exd);
+  };
+  actions.appendChild(addSet); actions.appendChild(copyLast);
+  body.appendChild(actions);
+  return body;
+}
+
+function buildSetRow(exd, s, i, prev){
+  const ph = k => prev && prev.sets[i] && prev.sets[i][k] ? esc(prev.sets[i][k]) : '';
+  const row = el(`
+    <div class="setrow">
+      <div class="setgrid">
+        <span class="idx">${i+1}</span>
+        <span class="unit" data-u="KG"><input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.w)}" placeholder="${ph('w')}" aria-label="Set ${i+1} weight in kilos"></span>
+        <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.r)}" placeholder="${ph('r')}" aria-label="Set ${i+1} ${esc(exd.unit || 'reps')}"></span>
+        <button class="setdone" aria-pressed="${s.done}" aria-label="Set ${i+1} complete">&#10003;</button>
+      </div>
+      <div class="effort">
+        ${EFFORT.map((lab,k)=>`<button aria-pressed="${s.e === k+1}" data-e="${k+1}">${lab}</button>`).join('')}
+      </div>
+    </div>`);
+  const [wIn, rIn] = row.querySelectorAll('input');
+  field(wIn, true,  v => { s.w = v; saveSoon(); refreshHead(exd); });
+  field(rIn, false, v => { s.r = v; saveSoon(); refreshHead(exd); });
+  row.querySelector('.setdone').onclick = e => {
+    s.done = !s.done;
+    e.currentTarget.setAttribute('aria-pressed', s.done);
+    if(s.done) startTimer(90);
+    save(); refreshHead(exd);
+  };
+  row.querySelectorAll('.effort button').forEach(b => {
+    b.onclick = () => {
+      const v = Number(b.dataset.e);
+      s.e = (s.e === v) ? 0 : v;
+      row.querySelectorAll('.effort button').forEach(x =>
+        x.setAttribute('aria-pressed', Number(x.dataset.e) === s.e));
+      save();
+    };
+  });
+  return row;
 }
 
 function finishSession(){
@@ -656,25 +782,59 @@ function finishSession(){
   store.history.push(a);
   if(a.track === 'gym') store.gymDone++; else store.homeDone++;
   store.active = null;
-  stopTimer(); save();
+  stopTimer(); keepAwake(false); save();
   toast('Session ' + a.num + ' logged');
   view = 'home'; render();
 }
 
-/* rest timer */
+/* Rest timer. The deadline is kept in its own key rather than in the store:
+   it is throwaway UI state, and putting it in sessions.v1 would mean a schema
+   bump for something that is meaningless a minute later. */
+const TKEY = 'sessions.timer';
 let timerEnd = 0, timerRunning = false, timerInt = null;
+
 function startTimer(sec){
   timerEnd = Date.now() + sec*1000; timerRunning = true;
-  clearInterval(timerInt); timerInt = setInterval(paintTimer, 250); paintTimer();
+  try{ localStorage.setItem(TKEY, String(timerEnd)); }catch(e){}
+  clearInterval(timerInt); timerInt = setInterval(tickTimer, 250); tickTimer();
 }
-function stopTimer(){ timerRunning = false; clearInterval(timerInt); paintTimer(); }
-function paintTimer(){
+function stopTimer(){
+  timerRunning = false; clearInterval(timerInt); timerInt = null;
+  try{ localStorage.removeItem(TKEY); }catch(e){}
+  paintTimer();
+}
+/* The completion check lives here and not in paintTimer, which returns early
+   when the button is off screen. It used to mean the interval ran for ever and
+   the rest never announced itself if you switched to another view. */
+function tickTimer(){
+  const left = Math.max(0, Math.round((timerEnd - Date.now())/1000));
+  paintTimer(left);
+  if(left === 0){
+    stopTimer();
+    toast('Rest done');
+    if(navigator.vibrate) navigator.vibrate(200);
+  }
+}
+function paintTimer(left){
   const b = document.querySelector('#timerBtn'); if(!b) return;
   if(!timerRunning){ b.textContent = 'Rest'; b.classList.remove('run'); return; }
-  const left = Math.max(0, Math.round((timerEnd - Date.now())/1000));
+  if(left === undefined) left = Math.max(0, Math.round((timerEnd - Date.now())/1000));
   b.textContent = Math.floor(left/60) + ':' + String(left%60).padStart(2,'0');
   b.classList.add('run');
-  if(left === 0){ stopTimer(); toast('Rest done'); if(navigator.vibrate) navigator.vibrate(200); }
+}
+/* Pick a running rest back up after a reload. Phones evict a backgrounded PWA
+   readily, and the countdown is computed from the deadline, never from ticks,
+   so time that passed while the app was gone still counts. */
+function resumeTimer(){
+  let end = 0;
+  try{ end = Number(localStorage.getItem(TKEY)) || 0; }catch(e){}
+  if(!end) return;
+  if(end > Date.now()){
+    timerEnd = end; timerRunning = true;
+    clearInterval(timerInt); timerInt = setInterval(tickTimer, 250); tickTimer();
+  }else{
+    try{ localStorage.removeItem(TKEY); }catch(e){}
+  }
 }
 
 function renderHistory(app){
@@ -733,12 +893,18 @@ function renderData(app){
   $('#imp').onclick = () => $('#file').click();
   $('#file').onchange = e => {
     const f = e.target.files[0]; if(!f) return;
+    e.target.value = '';   /* so picking the same file twice still fires */
     const r = new FileReader();
     r.onload = () => {
       try{
         const data = JSON.parse(r.result);
         if(!Array.isArray(data.history)) throw new Error('bad file');
         if((Number(data.version) || 0) > SCHEMA) throw new Error('newer');
+        /* Import replaces, it does not merge. Say so before doing it: the two
+           buttons sit next to each other and there is no undo. */
+        if(store.history.length && !confirm(
+             'Replace the ' + store.history.length + ' session(s) on this phone with the ' +
+             data.history.length + ' in this file? This cannot be undone.')) return;
         store = adopt(data); save();
         toast('Imported ' + store.history.length + ' sessions');
         view = 'home'; render();
@@ -794,6 +960,12 @@ document.querySelectorAll('.navlinks button').forEach(b => {
 load();
 if(store.active) { view = 'home'; }
 render();
+resumeTimer();
+
+/* Ask for the persistent storage bucket, which is the one Chrome does not
+   evict when the device runs short of space. Granted silently on an installed
+   app; a no-op everywhere else. Export is still the only real backup. */
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 /* Offline support. Registration is deliberately last so a failure here
    can never stop the app from rendering. */
