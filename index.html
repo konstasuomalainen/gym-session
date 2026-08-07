@@ -334,7 +334,48 @@ textarea{
 .hitem .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .hitem h3{font-family:var(--display);font-weight:700;font-size:21px;text-transform:uppercase;margin:0;line-height:1}
 .hitem .date{font-family:var(--mono);font-size:var(--t-sub);color:var(--muted)}
-.hitem .detail{font-family:var(--mono);font-size:var(--t-data);color:var(--muted);margin-top:8px;white-space:pre-wrap;line-height:1.6;display:block}
+.hitem .preview{display:block;font-family:var(--mono);font-size:var(--t-data);color:var(--muted);margin-top:6px}
+.hitem .detail{display:block;margin-top:10px}
+.hitem .detail table{width:100%;border-collapse:collapse;font-size:var(--t-data)}
+.hitem .detail th{
+  text-align:left;font-weight:600;font-family:var(--body);color:var(--ink);
+  padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;
+}
+.hitem .detail td{font-family:var(--mono);color:var(--muted);padding:5px 0;width:100%}
+.hitem .detail tr.na td{opacity:.6;font-style:italic}
+.hitem .detail .exn{display:block;font-family:var(--body);font-size:var(--t-sub);margin-top:2px}
+.hitem .detail .snote{display:block;margin-top:12px;font-size:var(--t-sub);color:var(--muted);line-height:1.5}
+.hitem .dactions{display:block;margin-top:10px}
+
+/* Log tabs */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--edge);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.tabs button{
+  padding:13px 8px;border:none;border-right:2px solid var(--edge);background:var(--card);cursor:pointer;color:var(--muted);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+}
+.tabs button:last-child{border-right:none}
+.tabs button[aria-current="true"]{background:var(--ink);color:var(--on-accent)}
+.divider{
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin:18px 0 8px;
+}
+.divider:first-child{margin-top:0}
+
+/* hand-drawn trend, no library */
+.spark{display:block;width:100%;height:34px;margin:2px 0 4px;overflow:visible}
+.spark polyline{fill:none;stroke:var(--blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.spark circle{fill:var(--blue)}
+.sparkcap{display:block;font-family:var(--mono);font-size:var(--t-sub);color:var(--muted);margin-bottom:10px}
+
+/* The one derived line. Deliberately not red and deliberately not a warning. */
+.signal{border-left:3px solid var(--muted);background:var(--card);padding:12px 14px;margin-top:20px;border-radius:var(--r)}
+.signal p{margin:0 0 6px;font-size:var(--t-sub);color:var(--ink);line-height:1.5}
+.signal p:last-child{margin-bottom:0}
+
+.ex.skipped{opacity:.72}
+.ex.skipped .tick{background:var(--hair);border-color:var(--hair);color:var(--muted)}
+.linkbtn.skip[aria-pressed="true"]{color:var(--muted)}
+.progress i.skip{background:var(--muted);opacity:.5}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:2px dashed var(--hair);border-radius:var(--r)}
 details.card > summary{
   padding:16px;cursor:pointer;list-style:none;
@@ -691,6 +732,80 @@ function setLine(sets){
               (x.c ? ' cut' : x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
     .join('   ');
 }
+/* Every exercise id that has ever been trained or is in the programme now.
+   History keeps ids that PROGRAM has since dropped, and those stay listed
+   under their raw id rather than disappearing. */
+function allExerciseIds(){
+  const seen = new Map();
+  ['gym','home'].forEach(tr => Object.keys(PROGRAM[tr].templates).forEach(id =>
+    PROGRAM[tr].templates[id].exercises.forEach(e => seen.set(e.id, e.name))));
+  store.history.forEach(s => Object.keys(s.ex || {}).forEach(id => {
+    if(!seen.has(id)) seen.set(id, id);
+  }));
+  return [...seen].map(([id, name]) => ({id, name}));
+}
+function exDef(id){
+  for(const tr of ['gym','home'])
+    for(const t of Object.values(PROGRAM[tr].templates)){
+      const e = t.exercises.find(x => x.id === id);
+      if(e) return e;
+    }
+  return null;
+}
+/* The number this movement is judged on: heaviest set, or most reps where
+   there is no load to carry the signal. */
+function topSet(sets, loaded){
+  if(!Array.isArray(sets)) return null;
+  const vals = sets.filter(x => x && (x.w || x.r))
+                   .map(x => Number(loaded ? x.w : x.r))
+                   .filter(v => !isNaN(v) && v > 0);
+  return vals.length ? Math.max(...vals) : null;
+}
+/* Every session that logged this movement, oldest first. Sessions where it
+   was explicitly skipped are left out: a skipped week is not a data point. */
+function exerciseHistory(exId){
+  const loaded = !exDef(exId) || exDef(exId).weight !== false;
+  return store.history
+    .filter(s => s.ex && s.ex[exId] && !(s.skipped && s.skipped[exId]))
+    .map(s => ({when: s.finishedAt, sets: s.ex[exId], top: topSet(s.ex[exId], loaded), track: s.track}))
+    .filter(x => x.top !== null);
+}
+
+/* The one derived signal in the app. The programme names strength falling
+   across weeks as the trigger to pull back from training to failure, and this
+   is the only place the app volunteers an opinion. It states what it sees and
+   stops: no recommendation, no colour, no alert. Adding a second signal would
+   turn a log into a nag, so do not. */
+function trendFor(exId){
+  const h = exerciseHistory(exId);
+  if(h.length < 4) return null;
+  const recent = h.slice(-4);
+  let falling = 0;
+  for(let i = recent.length - 1; i > 0; i--){
+    if(recent[i].top < recent[i-1].top) falling++;
+    else break;
+  }
+  if(falling < 3) return null;
+  return {values: recent.slice(-(falling+1)).map(x => x.top), n: falling};
+}
+
+/* A line, drawn by hand. No library, and none needed for a dozen points. */
+function sparkline(values){
+  if(values.length < 2) return '';
+  const w = 100, h = 28, lo = Math.min(...values), hi = Math.max(...values);
+  const span = hi - lo || 1;
+  const pt = (v, i) => [
+    (i / (values.length - 1)) * w,
+    h - 3 - ((v - lo) / span) * (h - 6)
+  ];
+  const pts = values.map(pt);
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"></polyline>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.5"></circle>
+  </svg>`;
+}
+
 /* The last note left against this movement. Machine settings belong to the
    machine, not to the session they were first written in. */
 function lastNoteFor(exId){
@@ -867,6 +982,10 @@ function exComplete(exId){
   if(!Array.isArray(s) || !s.length) return false;
   return s.every(x => x.done) || s.every(x => x.w !== '' || x.r !== '');
 }
+function exSkipped(exId){ return !!(store.active.skipped && store.active.skipped[exId]); }
+/* Done or deliberately not done. Both mean "nothing left to do here", which
+   is what the progress rule and the auto-advance care about. */
+function exResolved(exId){ return exSkipped(exId) || exComplete(exId); }
 
 /* How many past sessions carry data for this movement. Used to decide whether
    the form cue still needs to be on screen: it does for the first few, and
@@ -921,18 +1040,20 @@ function renderSession(app){
   if(!a){ view = 'home'; return render(); }
   const t = tmpl(a.track, a.templateId);
 
+  const editing = a.editIndex !== undefined;
   app.appendChild(el(`
     <div class="sesshead">
       <div>
-        <div class="eyebrow">${a.track === 'gym' ? 'Gym' : 'Home'} session ${a.num}</div>
+        <div class="eyebrow">${editing ? 'Correcting ' : ''}${a.track === 'gym' ? 'Gym' : 'Home'} session ${a.num}</div>
         <h2>${esc(t.name)}</h2>
       </div>
-      <div class="n">${esc(t.focus)}</div>
+      <div class="n">${esc(editing ? 'Already logged. Changes save over it.' : t.focus)}</div>
     </div>`));
 
   /* How much is left, without a sentence to read. */
   app.appendChild(el(`<div class="progress">${
-    t.exercises.map(e => `<i data-p="${esc(e.id)}" class="${exComplete(e.id) ? 'on' : ''}"></i>`).join('')
+    t.exercises.map(e =>
+      `<i data-p="${esc(e.id)}" class="${exSkipped(e.id) ? 'skip' : exComplete(e.id) ? 'on' : ''}"></i>`).join('')
   }</div>`));
 
   /* Walk card, gym only. A home session has no cardio prescription at all,
@@ -1010,7 +1131,7 @@ function renderSession(app){
   foot.innerHTML =
     '<div class="inner">' +
       '<button class="timer" id="timerBtn">Rest</button>' +
-      '<button class="btn" id="finishBtn">Finish session</button>' +
+      '<button class="btn" id="finishBtn">' + (editing ? 'Save changes' : 'Finish session') + '</button>' +
       '<button class="timerx" id="timerX" aria-label="Skip the rest">&times;</button>' +
     '</div>';
   /* While a rest is running the bar is the countdown, and tapping it buys
@@ -1027,15 +1148,16 @@ function cardFor(exId){ return document.querySelector('.ex[data-ex="' + CSS.esca
 /* The head carries the tick and the set line. Both change as you log, and
    neither is worth a re-render. */
 function refreshHead(exd){
-  const done = exComplete(exd.id);
+  const done = exComplete(exd.id), skipped = exSkipped(exd.id);
   const dot = document.querySelector(`.progress i[data-p="${CSS.escape(exd.id)}"]`);
-  if(dot) dot.classList.toggle('on', done);
+  if(dot){ dot.classList.toggle('on', done && !skipped); dot.classList.toggle('skip', skipped); }
   const card = cardFor(exd.id); if(!card) return;
   const sets = store.active.ex[exd.id] || [];
-  card.classList.toggle('done', done);
-  card.querySelector('.tick').innerHTML = done ? '&#10003;' : '';
-  card.querySelector('.sub').textContent =
-    sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
+  card.classList.toggle('done', done && !skipped);
+  card.classList.toggle('skipped', skipped);
+  card.querySelector('.tick').innerHTML = skipped ? '&ndash;' : done ? '&#10003;' : '';
+  card.querySelector('.sub').textContent = skipped ? 'Skipped'
+    : sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
 }
 
 /* Open or close an exercise by swapping one node. This used to call render(),
@@ -1099,6 +1221,7 @@ function buildRoundBlock(b){
     shot.onerror = () => shot.remove();
     f.appendChild(shot);
     f.appendChild(buildExNote(exd));
+    f.appendChild(buildSkip(exd));
     forms.appendChild(f);
   });
   head.querySelector('.form').onclick = () => forms.classList.toggle('show');
@@ -1117,6 +1240,21 @@ function buildRoundBlock(b){
     block.appendChild(round);
   }
   return block;
+}
+
+/* "Shoulder was complaining, left the press out" needs somewhere to go.
+   Blank reads as forgotten and a made-up number corrupts the trend, so a
+   skipped exercise says so, and the trend leaves those sessions out. */
+function buildSkip(exd){
+  const b = el(`<button class="linkbtn skip" aria-pressed="${exSkipped(exd.id)}">${exSkipped(exd.id) ? 'Skipped' : 'Skip'}</button>`);
+  b.onclick = () => {
+    const a = store.active;
+    if(a.skipped[exd.id]) delete a.skipped[exd.id]; else a.skipped[exd.id] = true;
+    b.setAttribute('aria-pressed', exSkipped(exd.id));
+    b.textContent = exSkipped(exd.id) ? 'Skipped' : 'Skip';
+    save(); refreshHead(exd);
+  };
+  return b;
 }
 
 /* A note against the movement rather than against the session. "Chest press
@@ -1163,6 +1301,7 @@ function buildExBody(exd){
 
   const target = el(`<div class="exmeta"><span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span><button class="linkbtn form">Form</button></div>`);
   target.querySelector('.form').onclick = () => forms.classList.toggle('show');
+  target.insertBefore(buildSkip(exd), target.querySelector('.form'));
   body.appendChild(target);
   body.appendChild(forms);
 
@@ -1277,7 +1416,7 @@ function advanceFrom(exd, i){
     return bringIntoWorkZone(next && next.classList.contains('round') ? next : null);
   }
   const rest = t.exercises.slice(t.exercises.findIndex(e => e.id === exd.id) + 1);
-  const next = rest.find(e => !exComplete(e.id) && !e.group);
+  const next = rest.find(e => !exResolved(e.id) && !e.group);
   if(!next) return;
   toggleEx(exd.id);            /* close the finished one */
   toggleEx(next.id);
@@ -1286,6 +1425,26 @@ function advanceFrom(exd, i){
 
 async function finishSession(){
   const a = store.active;
+
+  /* Saving a correction to an already logged session: write it back over the
+     same entry, and do not count it again. */
+  if(a.editIndex !== undefined){
+    const i = a.editIndex;
+    const note = await ask({title:'Save changes', body:'To session ' + a.num + '.',
+                            field:'Session note', value:a.note,
+                            confirmLabel:'Save', cancelLabel:'Back'});
+    if(note === false) return;
+    a.note = typeof note === 'string' ? note : a.note;
+    a.finishedAt = store.history[i].finishedAt;
+    delete a.editIndex;
+    store.history[i] = a;
+    store.active = null;
+    stopTimer(); keepAwake(false); save();
+    toast('Session ' + a.num + ' updated');
+    view = 'history'; render();
+    return;
+  }
+
   const logged = Object.values(a.ex).some(sets => Array.isArray(sets) && sets.some(s => s.w || s.r))
                  || a.cardio.done || a.cardio.actual;
   if(!logged && !await ask({title:'Nothing is logged', body:'Finish this session anyway?',
@@ -1387,12 +1546,56 @@ function resumeTimer(){
   }
 }
 
+let logTab = 'sessions', openMove = null;
+
 function renderHistory(app){
+  const tabs = el(`
+    <div class="tabs">
+      <button data-t="sessions" aria-current="${logTab === 'sessions'}">Sessions</button>
+      <button data-t="exercises" aria-current="${logTab === 'exercises'}">Exercises</button>
+    </div>`);
+  tabs.querySelectorAll('button').forEach(b => b.onclick = () => {
+    logTab = b.dataset.t; openMove = null; render();
+  });
+  app.appendChild(tabs);
+
   if(!store.history.length){
     app.appendChild(el('<div class="empty">No sessions logged yet. Start one from Now.</div>'));
     return;
   }
-  [...store.history].reverse().forEach(s => {
+  if(logTab === 'sessions') renderSessionsTab(app); else renderExercisesTab(app);
+}
+
+/* One line of what happened, so the common question does not need a tap. */
+function previewOf(s){
+  const t = tmpl(s.track, s.templateId);
+  const names = new Map(t.exercises.map(e => [e.id, e.name]));
+  const parts = [];
+  for(const [id, name] of names){
+    if(s.skipped && s.skipped[id]) continue;
+    const loaded = !exDef(id) || exDef(id).weight !== false;
+    const top = topSet(s.ex[id], loaded);
+    if(top === null) continue;
+    /* The id, not the name: "Barbell curl" and "Barbell row" both start with
+       "Barbell", and the ids are short, unique and hand-picked already. */
+    parts.push(id + ' ' + top + (loaded ? '' : 'x'));
+    if(parts.length === 3) break;
+  }
+  return parts.join('  ·  ') || 'nothing logged';
+}
+function bucketOf(iso){
+  const d = new Date(iso), now = new Date();
+  const days = Math.floor((now - d) / 864e5);
+  if(days <= 7) return 'This week';
+  if(days <= 14) return 'Last week';
+  return d.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+}
+
+function renderSessionsTab(app){
+  let bucket = null;
+  [...store.history].map((s, i) => ({s, i})).reverse().forEach(({s, i}) => {
+    const b = bucketOf(s.finishedAt);
+    if(b !== bucket){ bucket = b; app.appendChild(el(`<div class="divider">${esc(b)}</div>`)); }
     const t = tmpl(s.track, s.templateId);
     const item = el(`
       <button class="hitem">
@@ -1400,27 +1603,104 @@ function renderHistory(app){
           <h3>${esc(t.name)} &middot; ${s.num}</h3>
           <span class="date">${fmtDate(s.finishedAt)}</span>
         </span>
+        <span class="preview">${esc(previewOf(s))}</span>
       </button>`);
     item.onclick = () => {
-      let d = item.querySelector('.detail');
-      if(d){ d.remove(); return; }
-      /* Template order first, then anything logged under an id the template
-         no longer lists, so renamed or retired exercises stay readable. */
-      const names = new Map(t.exercises.map(e => [e.id, e.name]));
-      Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
-      const lines = [...names].map(([id, name]) => {
-        const line = setLine(s.ex[id] || []);
-        const n = s.exNote && s.exNote[id];
-        return name + (line ? '\n  ' + line : '\n  not logged') + (n ? '\n  " ' + n : '');
-      });
-      const c = s.cardio;
-      const walk = c.speed
-        ? 'Walk: ' + (c.actual || (c.done ? c.minutes : '0')) + ' min at ' + c.speed + ' km/h, ' + c.incline + ' percent'
-        : 'Walk: not logged';
-      item.appendChild(el(`<span class="detail">${esc(walk + '\n\n' + lines.join('\n') + (s.note ? '\n\n' + s.note : ''))}</span>`));
+      const d = item.querySelector('.detail');
+      if(d){ d.remove(); item.querySelector('.preview').style.display = ''; return; }
+      item.querySelector('.preview').style.display = 'none';
+      item.appendChild(buildSessionDetail(s, i));
     };
     app.appendChild(item);
   });
+}
+
+/* An aligned table rather than a wall of monospace. */
+function buildSessionDetail(s, i){
+  const t = tmpl(s.track, s.templateId);
+  const names = new Map(t.exercises.map(e => [e.id, e.name]));
+  Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
+  const rows = [...names].map(([id, name]) => {
+    const skipped = s.skipped && s.skipped[id];
+    const line = setLine(s.ex[id] || []);
+    const note = s.exNote && s.exNote[id];
+    return `<tr class="${skipped || !line ? 'na' : ''}">
+      <th>${esc(name)}</th>
+      <td>${skipped ? 'skipped' : esc(line) || 'not logged'}${note ? `<span class="exn">${esc(note)}</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+  const c = s.cardio;
+  const walk = c && c.speed
+    ? (c.actual || (c.done ? c.minutes : '0')) + ' min at ' + c.speed + ' km/h, ' + c.incline + '%'
+    : null;
+  const wrap = el(`
+    <span class="detail">
+      <table>${walk ? `<tr><th>Walk</th><td>${esc(walk)}</td></tr>` : ''}${rows}</table>
+      ${s.note ? `<span class="snote">${esc(s.note)}</span>` : ''}
+      <span class="dactions"><button class="linkbtn edit">Edit this session</button></span>
+    </span>`);
+  wrap.querySelector('.edit').onclick = e => { e.stopPropagation(); editSession(i); };
+  return wrap;
+}
+
+function renderExercisesTab(app){
+  /* Trained movements first, most recent at the top. Anything in the
+     programme but never logged sits underneath rather than at the front. */
+  const ids = allExerciseIds()
+    .filter(x => exerciseHistory(x.id).length || exDef(x.id))
+    .map(x => { const h = exerciseHistory(x.id); return {...x, n:h.length, last:h.length ? h[h.length-1].when : ''}; })
+    .sort((a, b) => (b.n ? 1 : 0) - (a.n ? 1 : 0) || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0));
+  ids.forEach(({id, name}) => {
+    const h = exerciseHistory(id);
+    const loaded = !exDef(id) || exDef(id).weight !== false;
+    const isOpen = openMove === id;
+    const item = el(`
+      <button class="hitem move" aria-expanded="${isOpen}">
+        <span class="top">
+          <h3>${esc(name)}</h3>
+          <span class="date">${h.length ? h[h.length-1].top + (loaded ? ' kg' : ' reps') : '&ndash;'}</span>
+        </span>
+        <span class="preview">${h.length ? h.length + ' session(s) logged' : 'never logged'}</span>
+      </button>`);
+    item.onclick = () => { openMove = isOpen ? null : id; render(); };
+    if(isOpen && h.length){
+      const vals = h.slice(-12).map(x => x.top);
+      const lines = h.slice(-12).reverse()
+        .map(x => `<tr><th>${esc(fmtDate(x.when).split(' ').slice(0,2).join(' '))}</th><td>${esc(setLine(x.sets))}</td></tr>`)
+        .join('');
+      item.appendChild(el(`
+        <span class="detail">
+          ${sparkline(vals)}
+          <span class="sparkcap">${vals.length > 1 ? esc(vals[0] + ' → ' + vals[vals.length-1] + (loaded ? ' kg' : ' reps') + ' over ' + vals.length + ' sessions') : ''}</span>
+          <table>${lines}</table>
+        </span>`));
+    }
+    app.appendChild(item);
+  });
+
+  /* The single derived line, if there is one to draw. */
+  const flags = ids.map(x => ({...x, t: trendFor(x.id)})).filter(x => x.t);
+  if(flags.length){
+    app.appendChild(el(`
+      <div class="signal">
+        ${flags.map(f => `<p>${esc(f.name)}: top set down ${f.t.n} sessions running (${esc(f.t.values.join(' → '))}).</p>`).join('')}
+      </div>`));
+  }
+}
+
+/* Reopen a logged session to correct it. One mistyped weight used to be
+   permanent, and it poisons every later comparison for that movement.
+   editIndex rides on the active session so a reload mid-edit still saves
+   back over the right entry rather than appending a duplicate. */
+async function editSession(i){
+  if(store.active && !await ask({
+      title:'A session is already open',
+      body:'Editing a logged session will discard the one in progress.',
+      confirmLabel:'Discard and edit', danger:true})) return;
+  store.active = {...store.history[i], editIndex: i};
+  delete store.active.finishedAt;
+  save();
+  view = 'session'; openEx = null; render();
 }
 
 /* A quiet line, not a modal and not red. It only has something to say when

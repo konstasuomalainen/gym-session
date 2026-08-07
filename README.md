@@ -15,7 +15,10 @@ after the first load.
 - Gym is one session: a giant set of barbell curl, overhead press and row, then lateral raises, machine chest press and face pulls. Everything to failure except the face pulls, which stop a rep or two short. Home is its own counter, and is meant to run daily.
 - The home block is listed in priority order. On a short day, cut from the bottom rather than skipping it.
 - The walk is a standing prescription, not a ramp. 30 minutes minimum at 8-10 percent and 4-6 km/h, before the lifting. Gym only: there is no walk on the home track.
-- Each exercise shows what you lifted for it last time, pulled from history by exercise id.
+- Each exercise shows what you lifted for it last time, pulled from history by exercise id. Tap an empty box to take that number.
+- The Log has two tabs. Sessions is what happened on a day; Exercises is one movement across time, with a trend line. If a movement's top set has fallen three sessions running, the Exercises tab says so in one line and leaves it there. That is the only opinion the app offers.
+- An exercise can be marked skipped. It reads as skipped rather than as missing, and it is left out of that movement's trend.
+- A logged session can be reopened and corrected from the Log.
 - Opening an exercise shows a start and end frame of the movement.
 - Everything autosaves on every keystroke. Closing the tab mid session loses nothing.
 
