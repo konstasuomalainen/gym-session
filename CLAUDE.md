@@ -28,11 +28,19 @@ wrong — fix the data shape instead.
 
 `cardioFor()` sits just below it and owns the walk prescription. Same rule.
 
-Two optional fields on an exercise:
+Optional fields on an exercise:
 
 - `group` — a label for exercises performed back to back with no rest. Consecutive
   exercises sharing a string get one heading above the first of them.
+- `unit` — what the second box counts, uppercased into its label. Defaults to `reps`.
+  Use `sec` for holds.
+- `weight` — set it to `false` for bodyweight work and the kg box disappears. The whole
+  home block uses this.
+- `link` — a demo video URL.
 - there is no image field, by design. See below.
+
+`cardioFor()` returning `null` means the track has no walk at all, which is how the home
+track works. Callers must tolerate it.
 
 ## Exercise ids are permanent
 

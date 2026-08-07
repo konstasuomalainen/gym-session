@@ -12,8 +12,9 @@ after the first load.
 ## How it works
 
 - The counter, not the calendar, drives everything. Session 7 is session 7 whether it happens on Tuesday or a week later. Nothing goes red, there is nothing to catch up.
-- Gym is one session: a giant set of barbell curl, overhead press and row, then lateral raises and machine chest press. Everything to failure. Home is its own counter.
-- The walk is a standing prescription, not a ramp. 30 minutes minimum at 8-10 percent and 4-6 km/h.
+- Gym is one session: a giant set of barbell curl, overhead press and row, then lateral raises, machine chest press and face pulls. Everything to failure except the face pulls, which stop a rep or two short. Home is its own counter, and is meant to run daily.
+- The home block is listed in priority order. On a short day, cut from the bottom rather than skipping it.
+- The walk is a standing prescription, not a ramp. 30 minutes minimum at 8-10 percent and 4-6 km/h, before the lifting. Gym only: there is no walk on the home track.
 - Each exercise shows what you lifted for it last time, pulled from history by exercise id.
 - Opening an exercise shows a start and end frame of the movement.
 - Everything autosaves on every keystroke. Closing the tab mid session loses nothing.
@@ -24,7 +25,7 @@ Edit the `PROGRAM` block at the top of `index.html`. It is the first thing in th
 
 Keep the `id` stable when renaming an exercise. History is stored by id, so changing `chestpress` to `chest_press` orphans every past entry for it, and breaks the link to its image.
 
-Optional fields on an exercise: `group` labels exercises done back to back with no rest, and `link` puts a demo video URL in the card.
+Optional fields on an exercise: `group` labels exercises done back to back with no rest, `unit` sets what the second box counts (`sec` for holds), `weight: false` removes the kg box for bodyweight work, and `link` puts a demo video URL in the card.
 
 ## Exercise images
 

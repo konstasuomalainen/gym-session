@@ -145,6 +145,8 @@ header{
 
 .setrow{border-top:1px solid var(--hair);padding:10px 0}
 .setgrid{display:grid;grid-template-columns:26px 1fr 1fr 42px;gap:8px;align-items:center}
+/* Bodyweight exercises drop the load column. */
+.setgrid.noweight{grid-template-columns:26px 1fr 42px}
 .setgrid .idx{font-family:var(--mono);font-size:13px;color:var(--muted)}
 .setgrid input{
   width:100%;font-family:var(--mono);font-size:19px;font-weight:600;text-align:center;
@@ -238,13 +240,14 @@ const PROGRAM = {
     templates: {
       main: {
         name: 'Gym',
-        focus: 'Giant set, then two on their own. Every set to failure.',
+        focus: 'Giant set, then three on their own. All to failure bar the face pulls.',
         exercises: [
           {id:'curl',       name:'Barbell curl',    group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Elbows pinned to the ribs, no lean back. Straight into the press, no rest.', link:''},
           {id:'ohp',        name:'Overhead press',  group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Ribs down, do not arch. Straight into the row, no rest.', link:''},
           {id:'bbrow',      name:'Barbell row',     group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Torso stays hinged the whole set, pull to the lower ribs. Rest here, then round two.', link:''},
           {id:'lateral',    name:'Dumbbell side lateral raise', sets:3, reps:'12 to failure', cue:'Lead with the elbow, stop at shoulder height. Light still burns.', link:''},
-          {id:'chestpress', name:'Machine chest press', sets:3, reps:'12 to failure', cue:'Handles at mid chest, back flat on the pad, full stretch at the back.', link:''}
+          {id:'chestpress', name:'Machine chest press', sets:3, reps:'12 to failure', cue:'Handles at mid chest, back flat on the pad, full stretch at the back.', link:''},
+          {id:'facepull',   name:'Face pull or cable rear delt pull', sets:3, reps:'15, 1 to 2 left in the tank', cue:'Pull to the forehead, thumbs back. This one is not to failure. It is here to undo the pressing.', link:''}
         ]
       }
     }
@@ -253,13 +256,19 @@ const PROGRAM = {
     order: ['homeA'],
     templates: {
       homeA: {
+        /* Every day, gym day or not. Listed in priority order: on a short or
+           bad day cut from the bottom rather than skipping the block. */
         name: 'Home',
-        focus: 'Walk plus a short bodyweight block',
+        focus: 'Daily. In order, and on a short day cut from the bottom.',
         exercises: [
-          {id:'pushup',  name:'Push-ups or incline push-ups', sets:3, reps:'as many as feel solid', cue:'Hands under the shoulders, body in one line. Use the sofa arm to raise the hands if needed.', link:'', unit:'reps'},
-          {id:'plank',   name:'Plank',    sets:3, reps:'30 to 45 sec', cue:'Log seconds in the reps box. Squeeze the glutes.', link:'', unit:'sec'},
-          {id:'birddog', name:'Bird dog', sets:2, reps:'8 each side',  cue:'Slow. Hips stay level, no rotation.', link:'', unit:'reps'},
-          {id:'deadbug', name:'Deadbug',  sets:2, reps:'8 each side',  cue:'Lower back stays flat on the floor the whole time.', link:'', unit:'reps'}
+          {id:'pushup',    name:'Push-ups or incline push-ups', sets:3, reps:'max to failure', cue:'Hands under the shoulders, body in one line. Use the sofa arm to raise the hands if needed. Set 3 will be well down on set 1, which is normal.', link:'', weight:false},
+          {id:'hipflexor', name:'Half-kneeling hip flexor stretch', sets:2, reps:'60 each side', cue:'Tuck the pelvis and squeeze the kneeling glute BEFORE leaning. Skip that and it stretches the lower back, which is the thing you are trying to fix.', link:'', unit:'sec', weight:false},
+          {id:'deadbug',   name:'Deadbug', sets:3, reps:'8 each side', cue:'Lower back stays flat on the floor throughout. If it lifts, shorten the range. The most useful item here.', link:'', weight:false},
+          {id:'gluteb',    name:'Glute bridge', sets:2, reps:'12, 2 sec pause', cue:'Pause at the top with the pelvis tucked. Squeeze, do not arch.', link:'', weight:false},
+          {id:'proneY',    name:'Prone Y raise or floor angel', sets:3, reps:'10 slow', cue:'Face down, arms out in a Y, thumbs up. Lift from the upper back, not the neck.', link:'', weight:false},
+          {id:'tspine',    name:'Thoracic extension over a chair back', sets:1, reps:'60', cue:'Upper back over the chair back or a rolled towel. Breathe out and let it open. This is what lets the neck come back.', link:'', unit:'sec', weight:false},
+          {id:'chintuck',  name:'Chin tucks', sets:1, reps:'10, holding 5 sec', cue:'Make a double chin, hold, release. Small movement.', link:'', weight:false},
+          {id:'plank',     name:'Plank', sets:2, reps:'30 to 45 sec', cue:'Squeeze the glutes, ribs down. Log the seconds.', link:'', unit:'sec', weight:false}
         ]
       }
     }
@@ -267,13 +276,16 @@ const PROGRAM = {
 };
 
 /* The walk. No ramp any more, this is the standing prescription.
-   30 minutes is a floor, not a target. */
+   30 minutes is a floor, not a target.
+   Home returns nothing on purpose: the treadmill is a gym item, and walking
+   anywhere else counts as steps rather than as training. */
 function cardioFor(track, n){
+  if(track !== 'gym') return null;
   return {
     minutes: 30,
     incline: '8-10',
     speed:   '4-6',
-    when:    track === 'gym' ? 'after the lifting' : 'before or after the bodyweight block'
+    when:    'before the lifting'
   };
 }
 
@@ -317,7 +329,8 @@ function adopt(data){
     if(!Array.isArray(s.active.ex[id])) delete s.active.ex[id];
   });
   if(s.active && !s.active.cardio){
-    s.active.cardio = {...cardioFor(s.active.track, s.active.num || 1), actual:'', done:false};
+    const c = cardioFor(s.active.track, s.active.num || 1);
+    s.active.cardio = c ? {...c, actual:'', done:false} : {};
   }
   return s;
 }
@@ -485,7 +498,7 @@ function renderHome(app){
         <div class="num">${n}<small>${track === 'gym' ? 'GYM' : 'HOME'}</small></div>
         <h2>${esc(t.name)}</h2>
         <p class="focus">${esc(t.focus)}</p>
-        <p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min at ${c.speed} km/h, ${c.incline} percent incline</p>
+        ${c ? `<p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min at ${c.speed} km/h, ${c.incline} percent incline</p>` : ''}
         <div class="stripe"></div>
       </div>`);
     app.appendChild(box);
@@ -509,9 +522,10 @@ function startSession(track){
   const t = tmpl(track, id);
   const ex = {};
   t.exercises.forEach(e => { ex[e.id] = freshSets(e); });
+  const c = cardioFor(track, n);
   store.active = {
     track, num:n, templateId:id, startedAt:new Date().toISOString(),
-    cardio:{...cardioFor(track,n), actual:'', done:false},
+    cardio: c ? {...c, actual:'', done:false} : {},
     ex, note:''
   };
   save();
@@ -570,8 +584,10 @@ function renderSession(app){
       <div class="n">${esc(t.focus)}</div>
     </div>`));
 
-  /* cardio card */
+  /* Walk card, gym only. A home session has no cardio prescription at all,
+     so there is nothing to show and nothing to log. */
   const c = a.cardio;
+  if(c && c.speed){
   const cardio = el(`
     <div class="card cardio">
       <div class="pad">
@@ -600,6 +616,7 @@ function renderSession(app){
     save();
   };
   app.appendChild(cardio);
+  }
 
   /* exercises */
   let shownGroup = null;
@@ -729,8 +746,10 @@ function buildExBody(exd){
     save();
     /* Write straight into the live fields. Re-rendering would move the page. */
     body.querySelectorAll('.setrow').forEach((row, i) => {
-      const ins = row.querySelectorAll('input');
-      if(sets[i]){ ins[0].value = sets[i].w; ins[1].value = sets[i].r; }
+      if(!sets[i]) return;
+      const w = row.querySelector('[data-f="w"]'), r = row.querySelector('[data-f="r"]');
+      if(w) w.value = sets[i].w;
+      if(r) r.value = sets[i].r;
     });
     refreshHead(exd);
   };
@@ -741,20 +760,24 @@ function buildExBody(exd){
 
 function buildSetRow(exd, s, i, prev){
   const ph = k => prev && prev.sets[i] && prev.sets[i][k] ? esc(prev.sets[i][k]) : '';
+  /* Bodyweight work gets no kg field. Sixteen empty boxes in the home block
+     were nothing but something to tab past. */
+  const loaded = exd.weight !== false;
   const row = el(`
     <div class="setrow">
-      <div class="setgrid">
+      <div class="setgrid${loaded ? '' : ' noweight'}">
         <span class="idx">${i+1}</span>
-        <span class="unit" data-u="KG"><input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.w)}" placeholder="${ph('w')}" aria-label="Set ${i+1} weight in kilos"></span>
-        <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.r)}" placeholder="${ph('r')}" aria-label="Set ${i+1} ${esc(exd.unit || 'reps')}"></span>
+        ${loaded ? `<span class="unit" data-u="KG"><input data-f="w" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.w)}" placeholder="${ph('w')}" aria-label="Set ${i+1} weight in kilos"></span>` : ''}
+        <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input data-f="r" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.r)}" placeholder="${ph('r')}" aria-label="Set ${i+1} ${esc(exd.unit || 'reps')}"></span>
         <button class="setdone" aria-pressed="${s.done}" aria-label="Set ${i+1} complete">&#10003;</button>
       </div>
       <div class="effort">
         ${EFFORT.map((lab,k)=>`<button aria-pressed="${s.e === k+1}" data-e="${k+1}">${lab}</button>`).join('')}
       </div>
     </div>`);
-  const [wIn, rIn] = row.querySelectorAll('input');
-  field(wIn, true,  v => { s.w = v; saveSoon(); refreshHead(exd); });
+  const wIn = row.querySelector('[data-f="w"]');
+  const rIn = row.querySelector('[data-f="r"]');
+  if(wIn) field(wIn, true, v => { s.w = v; saveSoon(); refreshHead(exd); });
   field(rIn, false, v => { s.r = v; saveSoon(); refreshHead(exd); });
   row.querySelector('.setdone').onclick = e => {
     s.done = !s.done;
