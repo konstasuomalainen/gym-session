@@ -28,11 +28,19 @@ wrong — fix the data shape instead.
 
 `cardioFor()` sits just below it and owns the walk prescription. Same rule.
 
-Two optional fields on an exercise:
+Optional fields on an exercise:
 
 - `group` — a label for exercises performed back to back with no rest. Consecutive
   exercises sharing a string get one heading above the first of them.
+- `unit` — what the second box counts, uppercased into its label. Defaults to `reps`.
+  Use `sec` for holds.
+- `weight` — set it to `false` for bodyweight work and the kg box disappears. The whole
+  home block uses this.
+- `link` — a demo video URL.
 - there is no image field, by design. See below.
+
+`cardioFor()` returning `null` means the track has no walk at all, which is how the home
+track works. Callers must tolerate it.
 
 ## Exercise ids are permanent
 
@@ -60,6 +68,17 @@ filename.
 They are deliberately absent from `ASSETS` in `sw.js`. The runtime handler caches each one
 the first time it is displayed, which keeps the install step from depending on files that
 may not exist yet.
+
+## Weight and steps
+
+`store.body` is one row per day, `{date, kg, steps}`, keyed by local date. The Now screen
+edits today's row and nothing else writes it.
+
+The only figure derived from it is the seven day rolling average of `kg`. That restraint is
+deliberate and comes from the training programme, which has an explicit boundary about
+logging producing guilt rather than data. **Do not add** a goal weight, a target line, a
+projection, a streak, a reminder to weigh in, or any state that can go red. If a number
+here ever needs interpreting, that belongs in the programme, not in the app.
 
 ## Stored data shape
 

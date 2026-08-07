@@ -3,7 +3,8 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="theme-color" content="#E7DECB">
+<meta name="theme-color" content="#E7DECB" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14120E" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Sessions">
@@ -21,18 +22,62 @@
   --card:#F5F0E4;
   --chalk:#FCFAF4;
   --ink:#17150F;
-  --muted:#7C7364;
+  /* Was #7C7364, which measured 3.5:1 against the floor and 4.1:1 against a
+     card. Both under AA, and worst exactly where the set lines live. */
+  --muted:#635B4C;
   --hair:#D3C7AE;
   --blue:#1D4E89;
-  --red:#B93B2B;
+  --red:#B93B2B;      /* destructive only */
+  --timer:#B9622B;    /* a running rest is not a warning */
   --ok:#3D6B4A;
+  /* Text on a filled accent. Flips with the theme: the accents get lighter in
+     the dark palette, so what sits on top of them has to get darker. */
+  --on-accent:#FCFAF4;
+  /* Structural strokes. Separate from --ink so the dark theme can quieten the
+     borders without touching the text colour. */
+  --edge:#17150F;
+  --line:rgba(23,21,15,.035);
+  --glow:rgba(29,78,137,.10);
+  --blue-wash:rgba(29,78,137,.07);
   --pad:18px;
   --r:4px;
+  /* One type scale. The old ramp ran down to 9px on the unit labels, which is
+     not legible at arm's length in a gym. 12px is the floor. */
+  --t-hero:52px;
+  --t-h1:36px;
+  --t-lead:20px;
+  --t-body:16px;
+  --t-data:15px;   /* mono set lines: this is the thing the app exists to show */
+  --t-sub:14px;
+  --t-micro:12px;  /* every uppercase label */
   --display:'Big Shoulders Display',Impact,sans-serif;
   --body:'IBM Plex Sans',system-ui,sans-serif;
   --mono:'IBM Plex Mono',ui-monospace,monospace;
 }
+@media (prefers-color-scheme:dark){
+  :root{
+    --floor:#14120E;
+    --card:#1E1B15;
+    --chalk:#262219;
+    --ink:#EFE7D6;
+    --muted:#9A9080;
+    --hair:#3A3428;
+    --blue:#6FA3DC;
+    --red:#E4705C;
+    --timer:#E08A4E;
+    --ok:#6FA97E;
+    --on-accent:#14120E;
+    --edge:#3A3428;
+    --line:rgba(239,231,214,.045);
+    --glow:rgba(111,163,220,.10);
+    --blue-wash:rgba(111,163,220,.12);
+  }
+}
 *{box-sizing:border-box}
+/* Kills the 300ms tap delay and double-tap zoom, and stops a long press on a
+   tick popping the text selection callout mid-set. */
+button,input,textarea,a{touch-action:manipulation}
+button{-webkit-tap-highlight-color:transparent;user-select:none;-webkit-user-select:none}
 html,body{margin:0;padding:0}
 body{
   background:var(--floor);
@@ -47,56 +92,79 @@ body{
 body::before{
   content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
   background:
-    repeating-linear-gradient(90deg,rgba(23,21,15,.035) 0 1px,transparent 1px 46px),
-    radial-gradient(circle at 50% -10%,rgba(29,78,137,.10),transparent 55%);
+    repeating-linear-gradient(90deg,var(--line) 0 1px,transparent 1px 46px),
+    radial-gradient(circle at 50% -10%,var(--glow),transparent 55%);
 }
 .wrap{position:relative;z-index:1;max-width:560px;margin:0 auto;padding:0 var(--pad) 120px}
 
 /* header */
 header{
   position:sticky;top:0;z-index:20;background:var(--floor);
-  border-bottom:2px solid var(--ink);
+  border-bottom:2px solid var(--edge);
   padding:14px var(--pad) 10px;margin:0 calc(var(--pad)*-1) 20px;
   display:flex;align-items:baseline;gap:12px;
 }
-.mark{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;line-height:1}
+.mark{font-family:var(--display);font-weight:800;font-size:26px;letter-spacing:.06em;text-transform:uppercase;line-height:1;margin:0}
 .mark em{font-style:normal;color:var(--red)}
 .navlinks{margin-left:auto;display:flex;gap:14px}
 .navlinks button{
-  background:none;border:none;padding:4px 0;cursor:pointer;color:var(--muted);
-  font-family:var(--body);font-size:13px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;
+  position:relative;background:none;border:none;padding:4px 0;cursor:pointer;color:var(--muted);
+  font-family:var(--body);font-size:var(--t-sub);font-weight:600;letter-spacing:.08em;text-transform:uppercase;
 }
 .navlinks button[aria-current="true"]{color:var(--ink);box-shadow:0 2px 0 var(--red)}
 
 /* generic */
-.eyebrow{font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
-.card{background:var(--card);border:2px solid var(--ink);border-radius:var(--r);margin-bottom:14px}
+.eyebrow{font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted)}
+.card{background:var(--card);border:2px solid var(--edge);border-radius:var(--r);margin-bottom:14px}
 .pad{padding:16px}
 .mono{font-family:var(--mono)}
 .muted{color:var(--muted)}
-.rule{height:2px;background:var(--ink);margin:22px 0}
+.rule{height:2px;background:var(--edge);margin:22px 0}
 
 /* next session hero */
-.hero{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--ink);border-radius:var(--r);padding:20px 18px 18px;margin-bottom:14px}
+.hero{position:relative;overflow:hidden;background:var(--card);border:2px solid var(--edge);border-radius:var(--r);padding:20px 18px 18px;margin-bottom:14px}
 .hero::after{
   content:"";position:absolute;right:-70px;top:-90px;width:230px;height:230px;
   border:3px solid var(--blue);border-radius:50%;opacity:.16;
 }
 .hero .num{
-  font-family:var(--display);font-weight:800;font-size:88px;line-height:.8;
-  letter-spacing:-.02em;color:var(--blue);margin:6px 0 2px;
+  font-family:var(--display);font-weight:800;font-size:var(--t-hero);line-height:.85;
+  letter-spacing:-.02em;color:var(--blue);margin:4px 0 2px;
 }
-.hero .num small{font-size:22px;color:var(--muted);letter-spacing:.05em;margin-left:8px;font-weight:700}
-.hero h2{font-family:var(--display);font-weight:700;font-size:34px;line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:8px 0 4px}
-.hero .focus{font-size:14px;color:var(--muted);margin:0}
+.hero .num small{font-size:18px;color:var(--muted);letter-spacing:.05em;margin-left:8px;font-weight:700}
+.hero h2{font-family:var(--display);font-weight:700;font-size:var(--t-h1);line-height:1;letter-spacing:.02em;text-transform:uppercase;margin:6px 0 4px}
+.hero .focus{font-size:var(--t-sub);color:var(--muted);margin:0}
 .stripe{height:6px;background:var(--red);width:64px;margin:14px 0 0}
+.chip{
+  display:inline-block;margin-left:6px;padding:1px 7px;border-radius:var(--r);
+  background:var(--blue);color:var(--on-accent);font-family:var(--mono);letter-spacing:0;
+}
+/* The home block is daily, so it is a standing row rather than a second hero
+   competing with the gym one. */
+.daily{
+  display:flex;align-items:center;gap:12px;width:100%;text-align:left;font:inherit;color:inherit;
+  background:var(--card);border:2px solid var(--edge);border-radius:var(--r);
+  padding:14px;margin:14px 0 0;cursor:pointer;
+}
+.daily b{display:block;font-family:var(--display);font-weight:700;font-size:24px;text-transform:uppercase;line-height:1;margin:3px 0 2px}
+.daily .sub{font-size:var(--t-sub);color:var(--muted)}
+.daily .go{margin-left:auto;font-size:24px;color:var(--blue)}
+/* Weight and steps. No target, no goal, no streak, nothing red. */
+.card.body{margin-top:14px}
+.bodygrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:10px 0 0}
+.bodygrid input{
+  width:100%;font-family:var(--mono);font-size:var(--t-lead);font-weight:600;text-align:center;
+  padding:13px 4px;border:2px solid var(--hair);border-radius:var(--r);background:var(--chalk);color:var(--ink);
+}
+.bodygrid input:focus{border-color:var(--blue)}
+.card.body .avg{margin:10px 0 0;font-size:var(--t-sub);color:var(--muted);line-height:1.5}
 
 /* buttons */
 .btn{
   display:block;width:100%;text-align:center;cursor:pointer;
   font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:.06em;text-transform:uppercase;
-  padding:14px;border:2px solid var(--ink);border-radius:var(--r);
-  background:var(--blue);color:var(--chalk);transition:transform .12s ease,filter .12s ease;
+  padding:14px;border:2px solid var(--edge);border-radius:var(--r);
+  background:var(--blue);color:var(--on-accent);transition:transform .12s ease,filter .12s ease;
 }
 .btn:active{transform:translateY(2px)}
 .btn.ghost{background:transparent;color:var(--ink)}
@@ -104,74 +172,136 @@ header{
 .btn:focus-visible,button:focus-visible,input:focus-visible{outline:3px solid var(--red);outline-offset:2px}
 
 /* stats strip */
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:2px solid var(--ink);border-radius:var(--r);overflow:hidden;background:var(--card)}
-.stats div{padding:12px 10px;border-right:2px solid var(--ink)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:0;border:2px solid var(--edge);border-radius:var(--r);overflow:hidden;background:var(--card)}
+.stats div{padding:12px 10px;border-right:2px solid var(--edge)}
 .stats div:last-child{border-right:none}
 .stats b{display:block;font-family:var(--mono);font-size:22px;font-weight:600;line-height:1.1}
-.stats span{font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+.stats span{font-size:var(--t-micro);letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 
 /* session view */
 .sesshead{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:16px}
 .sesshead h2{font-family:var(--display);font-weight:800;font-size:40px;line-height:.9;text-transform:uppercase;margin:2px 0 0}
 .sesshead .n{font-family:var(--mono);font-size:14px;color:var(--muted)}
 
-.ex{border:2px solid var(--ink);border-radius:var(--r);background:var(--card);margin-bottom:12px;overflow:hidden}
+/* how far through the session, without a sentence to read */
+.progress{display:flex;gap:5px;margin:0 0 16px}
+.progress i{flex:1;height:5px;background:var(--hair);border-radius:2px;transition:background .24s ease}
+.progress i.on{background:var(--ok)}
+
+/* The walk card folds to one row once it is logged. */
+.cardio .cardiosum{display:none}
+.cardio.folded{background:transparent}
+.cardio.folded .pad{display:none}
+.cardio.folded .cardiosum{
+  display:flex;align-items:center;gap:12px;width:100%;padding:14px;
+  background:none;border:none;font:inherit;color:var(--muted);text-align:left;cursor:pointer;
+  font-size:var(--t-data);font-family:var(--mono);
+}
+.cardio.folded .cardiosum .tick{
+  flex:0 0 26px;height:26px;border-radius:50%;display:grid;place-items:center;
+  background:var(--ok);color:var(--on-accent);font-size:14px;
+}
+.cardio.folded .cardiosum b{color:var(--ink);font-weight:600}
+
+/* A giant set, laid out as rounds. The doubled left edge is what makes it
+   read as one block rather than three cards that happen to be adjacent. */
+.rblock{border:2px solid var(--edge);border-left:6px solid var(--blue);border-radius:var(--r);background:var(--card);margin-bottom:12px;overflow:hidden}
+.rhead{display:flex;align-items:center;gap:10px;padding:12px 14px 0}
+.rhead .group{margin:0}
+.rhead .form{margin-left:auto}
+.forms{display:none;padding:0 14px}
+.forms.show{display:block}
+.exbody .forms{padding:0}
+.exmeta{display:flex;align-items:center;gap:10px;margin:12px 0 2px;font-size:var(--t-sub);color:var(--muted)}
+.exmeta .form{margin-left:auto}
+.exnote{margin-top:12px}
+.exnote .eyebrow{margin-bottom:5px}
+.exnote textarea{min-height:54px;font-size:var(--t-sub)}
+.forminfo{margin:12px 0 0}
+.forminfo h4{font-family:var(--display);font-weight:700;font-size:19px;text-transform:uppercase;margin:0;letter-spacing:.02em}
+.forminfo .cue{font-size:var(--t-sub);color:var(--muted);margin:2px 0 0}
+.round{padding:10px 14px 14px;border-top:1px solid var(--hair);margin-top:12px}
+.round:first-of-type{margin-top:10px}
+.rnum{font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:2px 0 6px}
+.rowlabel{font-family:var(--display);font-weight:700;font-size:17px;text-transform:uppercase;letter-spacing:.02em;line-height:1;margin:0 0 5px}
+.round .setrow{border-top:none;padding:6px 0}
+
+.ex{border:2px solid var(--edge);border-radius:var(--r);background:var(--card);margin-bottom:12px;overflow:hidden}
 .ex.done{background:var(--chalk)}
 .exhead{display:flex;align-items:center;gap:12px;padding:14px;cursor:pointer;width:100%;background:none;border:none;text-align:left;font:inherit;color:inherit}
 .exhead .tick{
-  flex:0 0 26px;height:26px;border:2px solid var(--ink);border-radius:50%;
+  flex:0 0 26px;height:26px;border:2px solid var(--edge);border-radius:50%;
   display:grid;place-items:center;font-size:14px;font-weight:700;background:transparent;
 }
-.ex.done .tick{background:var(--ok);color:var(--chalk);border-color:var(--ok)}
-.exhead h3{font-family:var(--display);font-weight:700;font-size:23px;line-height:1;text-transform:uppercase;margin:0;letter-spacing:.02em}
-.exhead .sub{font-size:12px;color:var(--muted);font-family:var(--mono);margin-top:3px}
+.ex.done .tick{background:var(--ok);color:var(--on-accent);border-color:var(--ok)}
+.exhead h3{font-family:var(--display);font-weight:700;font-size:24px;line-height:1;text-transform:uppercase;margin:0;letter-spacing:.02em}
+.exhead .sub{font-size:var(--t-data);color:var(--muted);font-family:var(--mono);margin-top:3px;display:block}
 .exbody{padding:0 14px 14px;border-top:2px dashed var(--hair)}
-.exbody .cue{font-size:13px;color:var(--muted);margin:12px 0 4px}
-.exbody a.demo{font-size:12px;color:var(--blue);font-weight:600}
+.exbody .cue{font-size:var(--t-sub);color:var(--muted);margin:12px 0 4px}
+.exbody a.demo{font-size:var(--t-sub);color:var(--blue);font-weight:600}
 /* Start and end frames. Hidden until it has actually decoded, so an
    exercise with no image never shows an empty frame. */
 .shot{display:none}
 .shot.ready{
   display:block;width:100%;height:auto;margin:12px 0 0;
-  border:2px solid var(--ink);border-radius:var(--r);background:var(--chalk);
+  border:2px solid var(--edge);border-radius:var(--r);background:var(--chalk);
 }
 /* Groups exercises that run back to back with no rest between them. */
 .group{
-  display:inline-block;background:var(--ink);color:var(--chalk);
-  font-size:11px;font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  display:inline-block;background:var(--ink);color:var(--on-accent);
+  font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;
   padding:5px 11px;border-radius:var(--r);margin:4px 0 8px;
 }
-.last{font-family:var(--mono);font-size:12px;color:var(--blue);margin:10px 0 12px;padding:8px 10px;background:rgba(29,78,137,.07);border-left:3px solid var(--blue)}
+.last{font-family:var(--mono);font-size:var(--t-data);color:var(--blue);margin:10px 0 12px;padding:8px 10px;background:var(--blue-wash);border-left:3px solid var(--blue)}
 
 .setrow{border-top:1px solid var(--hair);padding:10px 0}
-.setgrid{display:grid;grid-template-columns:26px 1fr 1fr 42px;gap:8px;align-items:center}
-.setgrid .idx{font-family:var(--mono);font-size:13px;color:var(--muted)}
-.setgrid input{
-  width:100%;font-family:var(--mono);font-size:19px;font-weight:600;text-align:center;
-  padding:10px 4px;border:2px solid var(--hair);border-radius:var(--r);background:var(--chalk);color:var(--ink);
-  -moz-appearance:textfield;
+.setgrid{display:grid;grid-template-columns:22px 1fr 54px 52px;gap:7px;align-items:center}
+/* Bodyweight exercises drop the load column. */
+.setgrid.noweight{grid-template-columns:22px 1fr 52px}
+/* The walk row logs one number and has no set index. */
+.setgrid.cardiogrid{grid-template-columns:1fr 52px}
+/* Minus and plus around the load. 2.5kg a tap, hold to run. Load is the only
+   variable the programme asks you to change, so it should not need a keypad. */
+.stepper{display:grid;grid-template-columns:36px 1fr 36px;gap:4px;align-items:center}
+.step{
+  height:52px;border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);
+  color:var(--muted);font-size:20px;font-weight:600;cursor:pointer;line-height:1;padding:0;
 }
-.setgrid input::-webkit-outer-spin-button,.setgrid input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.step:active{background:var(--blue);border-color:var(--blue);color:var(--on-accent)}
+.setgrid .idx{font-family:var(--mono);font-size:var(--t-sub);color:var(--muted)}
+.setgrid input{
+  width:100%;font-family:var(--mono);font-size:var(--t-lead);font-weight:600;text-align:center;
+  padding:13px 4px;border:2px solid var(--hair);border-radius:var(--r);background:var(--chalk);color:var(--ink);
+}
 .setgrid input:focus{border-color:var(--blue)}
 .unit{position:relative}
-.unit::after{content:attr(data-u);position:absolute;right:7px;bottom:4px;font-family:var(--mono);font-size:9px;color:var(--muted);letter-spacing:.08em}
-.setdone{border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);height:42px;cursor:pointer;font-size:16px;color:var(--muted)}
-.setdone[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--chalk)}
-.effort{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-top:8px}
-.effort button{
-  padding:8px 2px;border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);cursor:pointer;
-  font-family:var(--body);font-size:11px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);
+.unit::after{content:attr(data-u);position:absolute;right:6px;bottom:3px;font-family:var(--mono);font-size:var(--t-micro);line-height:1;color:var(--muted);letter-spacing:.04em;opacity:.75}
+/* The most tapped control in the app. It was 42px, which is under the size a
+   sweaty fingertip reliably hits. */
+.setdone{border:2px solid var(--hair);background:var(--chalk);border-radius:var(--r);height:52px;cursor:pointer;font-size:18px;color:var(--muted)}
+.setdone[aria-pressed="true"]{background:var(--ok);border-color:var(--ok);color:var(--on-accent)}
+/* One bit, and only once the set is ticked: did this one go the distance. */
+.cut{
+  display:none;margin-top:6px;padding:5px 9px;border:2px solid var(--hair);background:transparent;
+  border-radius:var(--r);cursor:pointer;color:var(--muted);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;
 }
-.effort button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--chalk)}
+.setrow.done .cut{display:inline-block}
+.cut[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--on-accent)}
 .exactions{display:flex;gap:8px;margin-top:12px}
-.linkbtn{background:none;border:none;padding:6px 0;cursor:pointer;font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+.linkbtn{position:relative;background:none;border:none;padding:6px 0;cursor:pointer;font-size:var(--t-micro);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--blue)}
+/* Text buttons stay visually small and get a 44px hit area anyway. Measured at
+   25 and 26px before this. */
+.linkbtn::before,.navlinks button::before{
+  content:"";position:absolute;left:0;right:0;top:50%;height:44px;transform:translateY(-50%);
+}
 
 /* cardio */
 .cardio{border:2px solid var(--blue);background:rgba(29,78,137,.06)}
 .presc{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:12px 0 14px}
-.presc div{text-align:center;padding:10px 4px;background:var(--chalk);border:2px solid var(--ink);border-radius:var(--r)}
+.presc div{text-align:center;padding:10px 4px;background:var(--chalk);border:2px solid var(--edge);border-radius:var(--r)}
 .presc b{display:block;font-family:var(--mono);font-size:24px;font-weight:600;line-height:1.1}
-.presc span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
+.presc span{font-size:var(--t-micro);letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
 
 textarea{
   width:100%;font-family:var(--body);font-size:15px;padding:10px;border:2px solid var(--hair);
@@ -181,42 +311,135 @@ textarea{
 /* sticky footer */
 .foot{
   position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--floor);
-  border-top:2px solid var(--ink);padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));
+  border-top:2px solid var(--edge);padding:12px var(--pad) calc(12px + env(safe-area-inset-bottom));
 }
 .foot .inner{max-width:560px;margin:0 auto;display:flex;gap:10px;align-items:center}
 .timer{
   flex:0 0 auto;font-family:var(--mono);font-size:20px;font-weight:600;padding:12px 14px;
-  border:2px solid var(--ink);border-radius:var(--r);background:var(--card);cursor:pointer;min-width:92px;text-align:center;
+  border:2px solid var(--edge);border-radius:var(--r);background:var(--card);cursor:pointer;min-width:92px;text-align:center;
 }
-.timer.run{background:var(--red);color:var(--chalk);border-color:var(--red)}
+/* A running rest owns the bar: the countdown has to read from a bench a metre
+   away, which 20px does not. The rule underneath drains as it runs. */
+.foot.resting #finishBtn{display:none}
+.timer.run{
+  flex:1 1 auto;position:relative;overflow:hidden;
+  background:var(--timer);color:var(--on-accent);border-color:var(--timer);
+  font-size:42px;line-height:1;padding:8px 14px 14px;letter-spacing:.02em;
+}
+.timer.run::after{
+  content:"";position:absolute;left:0;bottom:0;height:5px;width:var(--left,100%);
+  background:var(--on-accent);opacity:.55;transition:width .25s linear;
+}
+.timer.run.warn{animation:pulse .9s ease-in-out infinite}
+@keyframes pulse{0%,100%{filter:none}50%{filter:brightness(1.35)}}
+.timerx{
+  display:none;flex:0 0 auto;width:52px;height:52px;font-size:24px;line-height:1;cursor:pointer;
+  border:2px solid var(--edge);border-radius:var(--r);background:var(--card);color:var(--muted);
+}
+.foot.resting .timerx{display:block}
 
 /* history */
-.hitem{width:100%;text-align:left;background:var(--card);border:2px solid var(--ink);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;cursor:pointer;font:inherit;color:inherit}
+.hitem{width:100%;text-align:left;background:var(--card);border:2px solid var(--edge);border-radius:var(--r);padding:12px 14px;margin-bottom:10px;cursor:pointer;font:inherit;color:inherit}
 .hitem .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
 .hitem h3{font-family:var(--display);font-weight:700;font-size:21px;text-transform:uppercase;margin:0;line-height:1}
-.hitem .date{font-family:var(--mono);font-size:12px;color:var(--muted)}
-.hitem .detail{font-family:var(--mono);font-size:12px;color:var(--muted);margin-top:8px;white-space:pre-wrap;line-height:1.6}
+.hitem .date{font-family:var(--mono);font-size:var(--t-sub);color:var(--muted)}
+.hitem .preview{display:block;font-family:var(--mono);font-size:var(--t-data);color:var(--muted);margin-top:6px}
+.hitem .detail{display:block;margin-top:10px}
+.hitem .detail table{width:100%;border-collapse:collapse;font-size:var(--t-data)}
+.hitem .detail th{
+  text-align:left;font-weight:600;font-family:var(--body);color:var(--ink);
+  padding:5px 10px 5px 0;vertical-align:top;white-space:nowrap;
+}
+.hitem .detail td{font-family:var(--mono);color:var(--muted);padding:5px 0;width:100%}
+.hitem .detail tr.na td{opacity:.6;font-style:italic}
+.hitem .detail .exn{display:block;font-family:var(--body);font-size:var(--t-sub);margin-top:2px}
+.hitem .detail .snote{display:block;margin-top:12px;font-size:var(--t-sub);color:var(--muted);line-height:1.5}
+.hitem .dactions{display:block;margin-top:10px}
+
+/* Log tabs */
+.tabs{display:grid;grid-template-columns:1fr 1fr;gap:0;border:2px solid var(--edge);border-radius:var(--r);overflow:hidden;margin-bottom:16px}
+.tabs button{
+  padding:13px 8px;border:none;border-right:2px solid var(--edge);background:var(--card);cursor:pointer;color:var(--muted);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.14em;text-transform:uppercase;
+}
+.tabs button:last-child{border-right:none}
+.tabs button[aria-current="true"]{background:var(--ink);color:var(--on-accent)}
+.divider{
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--muted);margin:18px 0 8px;
+}
+.divider:first-child{margin-top:0}
+
+/* hand-drawn trend, no library */
+.spark{display:block;width:100%;height:34px;margin:2px 0 4px;overflow:visible}
+.spark polyline{fill:none;stroke:var(--blue);stroke-width:2;stroke-linejoin:round;stroke-linecap:round;vector-effect:non-scaling-stroke}
+.spark circle{fill:var(--blue)}
+.sparkcap{display:block;font-family:var(--mono);font-size:var(--t-sub);color:var(--muted);margin-bottom:10px}
+
+/* The one derived line. Deliberately not red and deliberately not a warning. */
+.signal{border-left:3px solid var(--muted);background:var(--card);padding:12px 14px;margin-top:20px;border-radius:var(--r)}
+.signal p{margin:0 0 6px;font-size:var(--t-sub);color:var(--ink);line-height:1.5}
+.signal p:last-child{margin-bottom:0}
+
+.ex.skipped{opacity:.72}
+.ex.skipped .tick{background:var(--hair);border-color:var(--hair);color:var(--muted)}
+.linkbtn.skip[aria-pressed="true"]{color:var(--muted)}
+.progress i.skip{background:var(--muted);opacity:.5}
 .empty{padding:28px 16px;text-align:center;color:var(--muted);border:2px dashed var(--hair);border-radius:var(--r)}
+details.card > summary{
+  padding:16px;cursor:pointer;list-style:none;
+  font-family:var(--body);font-size:var(--t-micro);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);
+}
+details.card > summary::-webkit-details-marker{display:none}
+details.card > summary::after{content:" +";font-family:var(--mono)}
+details.card[open] > summary::after{content:" \2212"}
+details.card > .pad{padding-top:0}
+
+/* confirm() replacement */
+.sheetwrap{
+  position:fixed;inset:0;z-index:60;background:rgba(0,0,0,.45);
+  display:flex;align-items:flex-end;justify-content:center;
+  opacity:0;transition:opacity .22s ease;
+}
+.sheetwrap.in{opacity:1}
+.sheet{
+  width:100%;max-width:560px;background:var(--card);border-top:2px solid var(--edge);
+  border-radius:var(--r) var(--r) 0 0;padding:20px var(--pad) calc(20px + env(safe-area-inset-bottom));
+  transform:translateY(14px);transition:transform .22s cubic-bezier(.2,.8,.3,1);
+}
+.sheetwrap.in .sheet{transform:none}
+.sheet h3{font-family:var(--display);font-weight:700;font-size:26px;text-transform:uppercase;margin:0 0 6px;line-height:1}
+.sheet p{margin:0 0 14px;font-size:var(--t-sub);color:var(--muted)}
+.sheet textarea{margin-bottom:14px}
+.sheetrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.btn.danger{background:var(--red);border-color:var(--red);color:var(--on-accent)}
 
 .toast{
   position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:50;
-  background:var(--ink);color:var(--chalk);padding:10px 16px;border-radius:var(--r);
-  font-size:14px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s ease;
+  background:var(--ink);color:var(--on-accent);padding:10px 16px;border-radius:var(--r);
+  font-size:var(--t-sub);font-weight:500;opacity:0;pointer-events:none;transition:opacity .2s ease;
 }
 .toast.show{opacity:1}
+/* Only the undo variant is interactive; a plain toast must never eat a tap. */
+.toast.wide.show{display:flex;align-items:center;gap:14px;pointer-events:auto}
+.toast .undo{
+  background:none;border:none;padding:6px 2px;cursor:pointer;color:var(--floor);
+  font-family:var(--body);font-size:var(--t-micro);font-weight:700;letter-spacing:.1em;text-transform:uppercase;
+}
 
-.fadein{animation:rise .32s ease both}
+/* Entry motion only, and only on the Now screen. 320ms plus a stagger meant
+   the last card settled almost half a second after a tap. */
+.fadein{animation:rise .18s cubic-bezier(.2,.8,.3,1) both}
 .fadein:nth-child(2){animation-delay:.04s}
 .fadein:nth-child(3){animation-delay:.08s}
-.fadein:nth-child(4){animation-delay:.12s}
-@keyframes rise{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+@keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
 <body>
 <div class="wrap">
   <header>
-    <div class="mark">Sess<em>i</em>ons</div>
+    <h1 class="mark">Sess<em>i</em>ons</h1>
     <nav class="navlinks">
       <button data-nav="home">Now</button>
       <button data-nav="history">Log</button>
@@ -226,7 +449,7 @@ textarea{
   <main id="app"></main>
 </div>
 <div class="foot" id="foot" hidden></div>
-<div class="toast" id="toast"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 /* ============================================================
@@ -240,13 +463,14 @@ const PROGRAM = {
     templates: {
       main: {
         name: 'Gym',
-        focus: 'Giant set, then two on their own. Every set to failure.',
+        focus: 'Giant set, then three on their own. All to failure bar the face pulls.',
         exercises: [
           {id:'curl',       name:'Barbell curl',    group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Elbows pinned to the ribs, no lean back. Straight into the press, no rest.', link:''},
           {id:'ohp',        name:'Overhead press',  group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Ribs down, do not arch. Straight into the row, no rest.', link:''},
-          {id:'bbrow',      name:'Barbell row',     group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Torso stays hinged the whole set, pull to the lower ribs. Rest here, then round two.', link:''},
+          {id:'bbrow',      name:'Barbell row',     group:'Giant set, 3 rounds',sets:3, reps:'12 to failure', cue:'Torso stays hinged the whole set, pull to the lower ribs. Rest here, then round two.', link:'', rest:120},
           {id:'lateral',    name:'Dumbbell side lateral raise', sets:3, reps:'12 to failure', cue:'Lead with the elbow, stop at shoulder height. Light still burns.', link:''},
-          {id:'chestpress', name:'Machine chest press', sets:3, reps:'12 to failure', cue:'Handles at mid chest, back flat on the pad, full stretch at the back.', link:''}
+          {id:'chestpress', name:'Machine chest press', sets:3, reps:'12 to failure', cue:'Handles at mid chest, back flat on the pad, full stretch at the back.', link:''},
+          {id:'facepull',   name:'Face pull or cable rear delt pull', sets:3, reps:'15, 1 to 2 left in the tank', cue:'Pull to the forehead, thumbs back. This one is not to failure. It is here to undo the pressing.', link:''}
         ]
       }
     }
@@ -255,13 +479,19 @@ const PROGRAM = {
     order: ['homeA'],
     templates: {
       homeA: {
+        /* Every day, gym day or not. Listed in priority order: on a short or
+           bad day cut from the bottom rather than skipping the block. */
         name: 'Home',
-        focus: 'Walk plus a short bodyweight block',
+        focus: 'Daily. In order, and on a short day cut from the bottom.',
         exercises: [
-          {id:'pushup',  name:'Push-ups or incline push-ups', sets:3, reps:'as many as feel solid', cue:'Hands under the shoulders, body in one line. Use the sofa arm to raise the hands if needed.', link:'', unit:'reps'},
-          {id:'plank',   name:'Plank',    sets:3, reps:'30 to 45 sec', cue:'Log seconds in the reps box. Squeeze the glutes.', link:'', unit:'sec'},
-          {id:'birddog', name:'Bird dog', sets:2, reps:'8 each side',  cue:'Slow. Hips stay level, no rotation.', link:'', unit:'reps'},
-          {id:'deadbug', name:'Deadbug',  sets:2, reps:'8 each side',  cue:'Lower back stays flat on the floor the whole time.', link:'', unit:'reps'}
+          {id:'pushup',    name:'Push-ups or incline push-ups', sets:3, reps:'max to failure', cue:'Hands under the shoulders, body in one line. Use the sofa arm to raise the hands if needed. Set 3 will be well down on set 1, which is normal.', link:'', weight:false},
+          {id:'hipflexor', name:'Half-kneeling hip flexor stretch', sets:2, reps:'60 each side', cue:'Tuck the pelvis and squeeze the kneeling glute BEFORE leaning. Skip that and it stretches the lower back, which is the thing you are trying to fix.', link:'', unit:'sec', weight:false, rest:0},
+          {id:'deadbug',   name:'Deadbug', sets:3, reps:'8 each side', cue:'Lower back stays flat on the floor throughout. If it lifts, shorten the range. The most useful item here.', link:'', weight:false},
+          {id:'gluteb',    name:'Glute bridge', sets:2, reps:'12, 2 sec pause', cue:'Pause at the top with the pelvis tucked. Squeeze, do not arch.', link:'', weight:false, rest:0},
+          {id:'proneY',    name:'Prone Y raise or floor angel', sets:3, reps:'10 slow', cue:'Face down, arms out in a Y, thumbs up. Lift from the upper back, not the neck.', link:'', weight:false, rest:0},
+          {id:'tspine',    name:'Thoracic extension over a chair back', sets:1, reps:'60', cue:'Upper back over the chair back or a rolled towel. Breathe out and let it open. This is what lets the neck come back.', link:'', unit:'sec', weight:false, rest:0},
+          {id:'chintuck',  name:'Chin tucks', sets:1, reps:'10, holding 5 sec', cue:'Make a double chin, hold, release. Small movement.', link:'', weight:false, rest:0},
+          {id:'plank',     name:'Plank', sets:2, reps:'30 to 45 sec', cue:'Squeeze the glutes, ribs down. Log the seconds.', link:'', unit:'sec', weight:false}
         ]
       }
     }
@@ -269,13 +499,16 @@ const PROGRAM = {
 };
 
 /* The walk. No ramp any more, this is the standing prescription.
-   30 minutes is a floor, not a target. */
+   30 minutes is a floor, not a target.
+   Home returns nothing on purpose: the treadmill is a gym item, and walking
+   anywhere else counts as steps rather than as training. */
 function cardioFor(track, n){
+  if(track !== 'gym') return null;
   return {
     minutes: 30,
     incline: '8-10',
     speed:   '4-6',
-    when:    track === 'gym' ? 'after the lifting' : 'before or after the bodyweight block'
+    when:    'before the lifting'
   };
 }
 
@@ -285,10 +518,10 @@ const EFFORT = ['Easy','OK','Hard','Max'];
    Storage
    ============================================================ */
 const KEY = 'sessions.v1';
-const SCHEMA = 1;
+const SCHEMA = 3;
 let store = null;
 
-function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[]}; }
+function blank(){ return {version:SCHEMA, gymDone:0, homeDone:0, active:null, history:[], body:[], lastExport:null}; }
 
 /* Bring a stored object of any older shape up to SCHEMA.
    To change the shape: bump SCHEMA, then append one block below.
@@ -299,7 +532,23 @@ function migrate(data){
     /* Before versioning. The shape already matches 1, so just stamp it. */
     v = 1;
   }
-  /* if(v === 1){ ...reshape data...; v = 2; } */
+  if(v === 1){
+    /* Notes moved from one per session to one per exercise, exercises can be
+       marked skipped, and the last export is remembered. Old sessions get the
+       empty versions of all three; their session note is left where it is. */
+    data.history = (data.history || []).map(s => ({exNote:{}, skipped:{}, ...s}));
+    if(data.active){
+      if(!data.active.exNote) data.active.exNote = {};
+      if(!data.active.skipped) data.active.skipped = {};
+    }
+    if(data.lastExport === undefined) data.lastExport = null;
+    v = 2;
+  }
+  if(v === 2){
+    /* One row a day for weight and steps. */
+    data.body = Array.isArray(data.body) ? data.body : [];
+    v = 3;
+  }
   data.version = v;
   return data;
 }
@@ -308,13 +557,30 @@ function migrate(data){
 function adopt(data){
   const s = Object.assign(blank(), migrate(data));
   if(!Array.isArray(s.history)) s.history = [];
+  if(!Array.isArray(s.body)) s.body = [];
+  s.body = s.body.filter(b => b && b.date);
   s.history = s.history.filter(x => x && x.track && x.templateId);
-  s.history.forEach(x => { if(!x.ex) x.ex = {}; if(!x.cardio) x.cardio = {}; });
+  s.history.forEach(x => {
+    if(!x.ex) x.ex = {};
+    if(!x.cardio) x.cardio = {};
+    if(!x.exNote) x.exNote = {};
+    if(!x.skipped) x.skipped = {};
+  });
   s.gymDone = Math.max(0, Math.floor(Number(s.gymDone)) || 0);
   s.homeDone = Math.max(0, Math.floor(Number(s.homeDone)) || 0);
   if(s.active && !(s.active.track && s.active.templateId && s.active.ex)) s.active = null;
+  if(s.active){
+    if(!s.active.exNote) s.active.exNote = {};
+    if(!s.active.skipped) s.active.skipped = {};
+  }
+  /* A hand-edited or truncated file can carry a non-array under an exercise id.
+     Drop those rather than letting finishSession() throw on them later. */
+  if(s.active) Object.keys(s.active.ex).forEach(id => {
+    if(!Array.isArray(s.active.ex[id])) delete s.active.ex[id];
+  });
   if(s.active && !s.active.cardio){
-    s.active.cardio = {...cardioFor(s.active.track, s.active.num || 1), actual:'', done:false};
+    const c = cardioFor(s.active.track, s.active.num || 1);
+    s.active.cardio = c ? {...c, actual:'', done:false} : {};
   }
   return s;
 }
@@ -336,9 +602,20 @@ function keepCorrupt(raw){
   try{ localStorage.setItem(KEY + '.corrupt.' + Date.now(), raw); }catch(e){}
 }
 function save(){
+  clearTimeout(saveTimer); saveTimer = null;
   try{ localStorage.setItem(KEY, JSON.stringify(store)); }
   catch(e){ toast('Could not save to this browser'); }
 }
+/* Typing calls this on every keystroke, and every call stringifies the whole
+   store, which grows with history. Taps still use save() and write at once.
+   Flushed on hide, so a backgrounded phone cannot lose the last character. */
+let saveTimer = null;
+function saveSoon(){
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(save, 250);
+}
+addEventListener('visibilitychange', () => { if(document.hidden && saveTimer) save(); });
+addEventListener('pagehide', () => { if(saveTimer) save(); });
 
 /* ============================================================
    Helpers
@@ -351,10 +628,97 @@ function fmtDate(iso){
   return d.toLocaleDateString(undefined,{day:'numeric',month:'short'}) + ' ' +
          d.toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'});
 }
+/* Number fields are type=text, not type=number. A browser running an English
+   locale with a Finnish keyboard rejects the comma outright, so 22,5 is stored
+   as 225, and assigning a value containing a comma blanks the field whatever
+   the locale. Take the raw text and normalise it here instead. */
+function num(v, dot){
+  v = String(v).replace(',', '.').replace(dot ? /[^0-9.]/g : /[^0-9]/g, '');
+  if(!dot) return v;
+  const i = v.indexOf('.');
+  return i < 0 ? v : v.slice(0, i+1) + v.slice(i+1).replace(/\./g, '');
+}
+/* Every number field behaves the same: normalise on input, select on focus so
+   typing replaces instead of appending, and Enter moves to the next one.
+   Tapping an empty field takes last session's number, shown as the
+   placeholder, which makes "same as last time" a single tap. Only on a real
+   tap: tabbing through with Enter must not fill the whole session in. */
+function field(input, dot, onval){
+  let tapped = false;
+  input.onpointerdown = () => { tapped = true; };
+  input.onfocus = e => {
+    if(tapped && !e.target.value && e.target.placeholder){
+      e.target.value = e.target.placeholder;
+      onval(e.target.value);
+    }
+    tapped = false;
+    e.target.select();
+  };
+  input.oninput = e => {
+    const clean = num(e.target.value, dot);
+    if(clean !== e.target.value) e.target.value = clean;
+    onval(clean);
+  };
+  input.onkeydown = e => {
+    if(e.key !== 'Enter') return;
+    e.preventDefault();
+    const all = [...document.querySelectorAll('#app input')];
+    const next = all[all.indexOf(e.target) + 1];
+    if(next) next.focus(); else e.target.blur();
+  };
+  return input;
+}
+/* An in-app sheet instead of confirm(). The native dialog cannot be styled,
+   looks foreign inside an installed app, and on some Android builds is
+   suppressed outright, which would have made "Erase everything" fire without
+   asking. Slides up from the bottom because that is where the thumb is.
+   Returns a promise, and can carry one field. */
+function ask(opt){
+  return new Promise(resolve => {
+    const wrap = el(`
+      <div class="sheetwrap">
+        <div class="sheet" role="dialog" aria-modal="true" aria-label="${esc(opt.title)}">
+          <h3>${esc(opt.title)}</h3>
+          ${opt.body ? `<p>${esc(opt.body)}</p>` : ''}
+          ${opt.field ? `<textarea placeholder="${esc(opt.field)}">${esc(opt.value || '')}</textarea>` : ''}
+          <div class="sheetrow">
+            <button class="btn ghost" data-a="no">${esc(opt.cancelLabel || 'Cancel')}</button>
+            <button class="btn${opt.danger ? ' danger' : ''}" data-a="yes">${esc(opt.confirmLabel || 'OK')}</button>
+          </div>
+        </div>
+      </div>`);
+    const ta = wrap.querySelector('textarea');
+    const close = val => {
+      document.removeEventListener('keydown', onKey);
+      wrap.remove();
+      resolve(val);
+    };
+    const onKey = e => { if(e.key === 'Escape') close(false); };
+    wrap.querySelector('[data-a="no"]').onclick = () => close(false);
+    wrap.querySelector('[data-a="yes"]').onclick = () => close(ta ? (ta.value || true) : true);
+    wrap.onclick = e => { if(e.target === wrap) close(false); };
+    document.addEventListener('keydown', onKey);
+    document.body.appendChild(wrap);
+    requestAnimationFrame(() => wrap.classList.add('in'));
+    (opt.danger ? wrap.querySelector('[data-a="no"]') : (ta || wrap.querySelector('[data-a="yes"]'))).focus();
+  });
+}
+
 let toastTimer;
-function toast(msg){
-  const t = $('#toast'); t.textContent = msg; t.classList.add('show');
-  clearTimeout(toastTimer); toastTimer = setTimeout(()=>t.classList.remove('show'), 2200);
+function toast(msg, undo){
+  const t = $('#toast');
+  t.textContent = msg;
+  if(undo){
+    const b = el('<button class="undo">Undo</button>');
+    b.onclick = () => { t.classList.remove('show'); undo(); };
+    t.appendChild(b);
+    t.classList.add('wide');
+  }else{
+    t.classList.remove('wide');
+  }
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), undo ? 6000 : 2200);
 }
 /* A session in history can name a template that has since been edited out of
    PROGRAM. Degrade to a stub rather than throwing and taking the Log view down. */
@@ -375,17 +739,104 @@ function lastFor(exId){
   }
   return null;
 }
+/* Sets logged before the effort buttons were replaced still carry .e, so both
+   are read. Nothing on disk was rewritten. */
 function setLine(sets){
   if(!Array.isArray(sets)) return '';
   return sets.filter(x => x && (x.w || x.r))
-    .map(x => (x.w ? x.w + ' kg' : 'bw') + ' x ' + (x.r || '?') + (x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
+    .map(x => (x.w ? x.w + ' kg' : 'bw') + ' x ' + (x.r || '?') +
+              (x.c ? ' cut' : x.e ? ' ' + EFFORT[x.e-1].toLowerCase() : ''))
     .join('   ');
+}
+/* Every exercise id that has ever been trained or is in the programme now.
+   History keeps ids that PROGRAM has since dropped, and those stay listed
+   under their raw id rather than disappearing. */
+function allExerciseIds(){
+  const seen = new Map();
+  ['gym','home'].forEach(tr => Object.keys(PROGRAM[tr].templates).forEach(id =>
+    PROGRAM[tr].templates[id].exercises.forEach(e => seen.set(e.id, e.name))));
+  store.history.forEach(s => Object.keys(s.ex || {}).forEach(id => {
+    if(!seen.has(id)) seen.set(id, id);
+  }));
+  return [...seen].map(([id, name]) => ({id, name}));
+}
+function exDef(id){
+  for(const tr of ['gym','home'])
+    for(const t of Object.values(PROGRAM[tr].templates)){
+      const e = t.exercises.find(x => x.id === id);
+      if(e) return e;
+    }
+  return null;
+}
+/* The number this movement is judged on: heaviest set, or most reps where
+   there is no load to carry the signal. */
+function topSet(sets, loaded){
+  if(!Array.isArray(sets)) return null;
+  const vals = sets.filter(x => x && (x.w || x.r))
+                   .map(x => Number(loaded ? x.w : x.r))
+                   .filter(v => !isNaN(v) && v > 0);
+  return vals.length ? Math.max(...vals) : null;
+}
+/* Every session that logged this movement, oldest first. Sessions where it
+   was explicitly skipped are left out: a skipped week is not a data point. */
+function exerciseHistory(exId){
+  const loaded = !exDef(exId) || exDef(exId).weight !== false;
+  return store.history
+    .filter(s => s.ex && s.ex[exId] && !(s.skipped && s.skipped[exId]))
+    .map(s => ({when: s.finishedAt, sets: s.ex[exId], top: topSet(s.ex[exId], loaded), track: s.track}))
+    .filter(x => x.top !== null);
+}
+
+/* The one derived signal in the app. The programme names strength falling
+   across weeks as the trigger to pull back from training to failure, and this
+   is the only place the app volunteers an opinion. It states what it sees and
+   stops: no recommendation, no colour, no alert. Adding a second signal would
+   turn a log into a nag, so do not. */
+function trendFor(exId){
+  const h = exerciseHistory(exId);
+  if(h.length < 4) return null;
+  const recent = h.slice(-4);
+  let falling = 0;
+  for(let i = recent.length - 1; i > 0; i--){
+    if(recent[i].top < recent[i-1].top) falling++;
+    else break;
+  }
+  if(falling < 3) return null;
+  return {values: recent.slice(-(falling+1)).map(x => x.top), n: falling};
+}
+
+/* A line, drawn by hand. No library, and none needed for a dozen points. */
+function sparkline(values){
+  if(values.length < 2) return '';
+  const w = 100, h = 28, lo = Math.min(...values), hi = Math.max(...values);
+  const span = hi - lo || 1;
+  const pt = (v, i) => [
+    (i / (values.length - 1)) * w,
+    h - 3 - ((v - lo) / span) * (h - 6)
+  ];
+  const pts = values.map(pt);
+  const last = pts[pts.length - 1];
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" preserveAspectRatio="none" aria-hidden="true">
+    <polyline points="${pts.map(p => p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ')}"></polyline>
+    <circle cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.5"></circle>
+  </svg>`;
+}
+
+/* The last note left against this movement. Machine settings belong to the
+   machine, not to the session they were first written in. */
+function lastNoteFor(exId){
+  for(let i = store.history.length - 1; i >= 0; i--){
+    const n = store.history[i].exNote && store.history[i].exNote[exId];
+    if(n) return n;
+  }
+  return '';
 }
 
 /* ============================================================
    Views
    ============================================================ */
 let view = 'home';
+let renderedView = null;
 let openEx = null;
 
 function render(){
@@ -399,7 +850,10 @@ function render(){
   else if(view === 'session') renderSession(app);
   else if(view === 'history') renderHistory(app);
   else renderData(app);
-  window.scrollTo(0,0);
+  /* Only a change of view returns to the top. Opening an exercise, adding a set
+     and copying last time all edit the page in place and must not move it. */
+  if(view !== renderedView) window.scrollTo(0,0);
+  renderedView = view;
 }
 
 function renderHome(app){
@@ -415,46 +869,135 @@ function renderHome(app){
         <div class="stripe"></div>
       </div>`));
     const resume = el('<button class="btn fadein">Resume session</button>');
-    resume.onclick = () => { view = 'session'; openEx = null; render(); };
+    resume.onclick = () => { keepAwake(true); view = 'session'; openEx = null; render(); };
     app.appendChild(resume);
     const drop = el('<button class="linkbtn" style="margin-top:10px">Discard this session</button>');
-    drop.onclick = () => {
-      if(confirm('Discard the session in progress? Nothing will be saved.')){
-        store.active = null; save(); render();
+    drop.onclick = async () => {
+      if(await ask({title:'Discard this session?', body:'Nothing in it will be saved.',
+                    confirmLabel:'Discard', danger:true})){
+        store.active = null; save(); keepAwake(false); render();
       }
     };
     app.appendChild(drop);
     app.appendChild(el('<div class="rule"></div>'));
   }
 
-  ['gym','home'].forEach(track => {
-    if(a && a.track === track) return;
-    const id = nextTemplateId(track);
-    const t = tmpl(track, id);
-    const n = (track === 'gym' ? store.gymDone : store.homeDone) + 1;
-    const c = cardioFor(track, n);
-    const box = el(`
+  /* Gym leads, home is a single row. That asymmetry is the truth: the home
+     block runs every day and the gym does not, and two identical heroes made
+     you read both to tell them apart while pushing the second button off the
+     bottom of the screen. */
+  if(!a || a.track !== 'gym'){
+    const n = store.gymDone + 1;
+    const t = tmpl('gym', nextTemplateId('gym'));
+    const c = cardioFor('gym', n);
+    app.appendChild(el(`
       <div class="hero fadein">
-        <div class="eyebrow">Next ${track === 'gym' ? 'gym' : 'home'} session</div>
-        <div class="num">${n}<small>${track === 'gym' ? 'GYM' : 'HOME'}</small></div>
+        <div class="eyebrow">Next gym session <span class="chip">${n}</span></div>
         <h2>${esc(t.name)}</h2>
         <p class="focus">${esc(t.focus)}</p>
-        <p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min at ${c.speed} km/h, ${c.incline} percent incline</p>
+        ${c ? `<p class="focus mono" style="margin-top:6px">Walk ${c.minutes} min &middot; ${c.speed} km/h &middot; ${c.incline}% &middot; ${esc(c.when)}</p>` : ''}
         <div class="stripe"></div>
-      </div>`);
-    app.appendChild(box);
-    const b = el(`<button class="btn ${track === 'home' ? 'ghost' : ''} fadein" style="margin-bottom:16px">Start ${track === 'gym' ? 'gym' : 'home'} session</button>`);
-    b.onclick = () => startSession(track);
+      </div>`));
+    const b = el('<button class="btn fadein">Start gym session</button>');
+    b.onclick = () => startSession('gym');
     app.appendChild(b);
-  });
+  }
 
-  const last = store.history[store.history.length - 1];
+  if(!a || a.track !== 'home'){
+    const t = tmpl('home', nextTemplateId('home'));
+    const row = el(`
+      <button class="daily fadein">
+        <span>
+          <span class="eyebrow">Daily &middot; home block ${store.homeDone + 1}</span>
+          <b>${esc(t.name)}</b>
+          <span class="sub">${t.exercises.length} items, under 20 min${homeDoneToday() ? ' &middot; done today' : ''}</span>
+        </span>
+        <span class="go">&rarr;</span>
+      </button>`);
+    row.onclick = () => startSession('home');
+    app.appendChild(row);
+  }
+
+  app.appendChild(buildBodyRow());
+
+  /* Numbers you would act on, rather than two counters repeated from above. */
+  const gym7 = sessionsInLastDays('gym', 7);
+  const since = daysSinceLast('gym');
   app.appendChild(el(`
     <div class="stats fadein">
-      <div><b>${store.gymDone}</b><span>Gym done</span></div>
-      <div><b>${store.homeDone}</b><span>Home done</span></div>
-      <div><b>${last ? fmtDate(last.finishedAt).split(' ')[0] + ' ' + fmtDate(last.finishedAt).split(' ')[1] : '&ndash;'}</b><span>Last session</span></div>
+      <div><b>${gym7}</b><span>Gym, last 7 days</span></div>
+      <div><b>${since === null ? '&ndash;' : since}</b><span>Days since gym</span></div>
+      <div><b>${homeDoneToday() ? 'Yes' : 'No'}</b><span>Home block today</span></div>
     </div>`));
+}
+
+/* Weight and steps. One row a day, overwritable, and the seven day rolling
+   average is the only thing derived from them. Deliberately no target line,
+   no goal weight, no streak, no reminder and nothing that can go red: the
+   programme owns what the number means, this only owns recording it. */
+function todayKey(){
+  const d = new Date();
+  return new Date(d.getTime() - d.getTimezoneOffset()*60000).toISOString().slice(0,10);
+}
+function bodyFor(date){ return store.body.find(b => b.date === date) || null; }
+function setBody(field, value){
+  let e = bodyFor(todayKey());
+  if(!e){
+    e = {date: todayKey(), kg:'', steps:''};
+    store.body.push(e);
+    store.body.sort((a, b) => a.date < b.date ? -1 : 1);
+  }
+  e[field] = value;
+  saveSoon();
+}
+function rollingKg(){
+  const cut = Date.now() - 7*864e5;
+  const vals = store.body
+    .filter(b => b.kg && new Date(b.date + 'T12:00:00').getTime() >= cut)
+    .map(b => Number(b.kg))
+    .filter(v => !isNaN(v) && v > 0);
+  if(!vals.length) return null;
+  return {avg: vals.reduce((a, b) => a + b, 0) / vals.length, n: vals.length};
+}
+
+function buildBodyRow(){
+  const t = bodyFor(todayKey()) || {kg:'', steps:''};
+  const card = el(`
+    <div class="card body fadein"><div class="pad">
+      <div class="eyebrow">Today</div>
+      <div class="bodygrid">
+        <span class="unit" data-u="KG"><input data-b="kg" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(t.kg)}" aria-label="Weight today in kilos"></span>
+        <span class="unit" data-u="STEPS"><input data-b="steps" type="text" inputmode="numeric" enterkeyhint="done" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(t.steps)}" aria-label="Steps today"></span>
+      </div>
+      <p class="avg"></p>
+    </div></div>`);
+  const avg = card.querySelector('.avg');
+  const paint = () => {
+    const r = rollingKg();
+    avg.textContent = r
+      ? '7 day average ' + r.avg.toFixed(1) + ' kg, from ' + r.n + ' reading' + (r.n === 1 ? '' : 's')
+      : 'Weigh in the same way each morning. A single day means nothing; the seven day average is the number.';
+  };
+  paint();
+  field(card.querySelector('[data-b="kg"]'), true, v => { setBody('kg', v); paint(); });
+  field(card.querySelector('[data-b="steps"]'), false, v => setBody('steps', v));
+  return card;
+}
+
+function sessionsInLastDays(track, days){
+  const cut = Date.now() - days*864e5;
+  return store.history.filter(s => s.track === track && new Date(s.finishedAt).getTime() >= cut).length;
+}
+function daysSinceLast(track){
+  for(let i = store.history.length - 1; i >= 0; i--){
+    if(store.history[i].track === track)
+      return Math.floor((Date.now() - new Date(store.history[i].finishedAt).getTime()) / 864e5);
+  }
+  return null;
+}
+function homeDoneToday(){
+  const today = new Date().toDateString();
+  return store.history.some(s => s.track === 'home' && new Date(s.finishedAt).toDateString() === today);
 }
 
 function startSession(track){
@@ -463,19 +1006,42 @@ function startSession(track){
   const t = tmpl(track, id);
   const ex = {};
   t.exercises.forEach(e => { ex[e.id] = freshSets(e); });
+  const c = cardioFor(track, n);
   store.active = {
     track, num:n, templateId:id, startedAt:new Date().toISOString(),
-    cardio:{...cardioFor(track,n), actual:'', done:false},
-    ex, note:''
+    cardio: c ? {...c, actual:'', done:false} : {},
+    ex, exNote:{}, skipped:{}, note:''
   };
   save();
-  view = 'session'; openEx = t.exercises[0].id; render();
+  /* The wake lock has to be requested inside the tap that started the session:
+     iOS only grants it from a user gesture. */
+  keepAwake(true);
+  /* A template can legitimately be empty while PROGRAM is being edited. */
+  view = 'session'; openEx = t.exercises.length ? t.exercises[0].id : null; render();
 }
+
+/* Keep the screen on for the length of a session. Silently does nothing where
+   the API is missing. The lock drops when the tab is hidden, so it is taken
+   again on the way back. */
+let wake = null;
+async function keepAwake(on){
+  try{
+    if(on){
+      if(!wake && 'wakeLock' in navigator){
+        wake = await navigator.wakeLock.request('screen');
+        wake.addEventListener('release', () => { wake = null; });
+      }
+    }else if(wake){ wake.release(); wake = null; }
+  }catch(e){}
+}
+addEventListener('visibilitychange', () => {
+  if(!document.hidden && view === 'session' && store && store.active) keepAwake(true);
+});
 
 /* Blank sets for an exercise, used on start and when PROGRAM gains an
    exercise while a session is already running. */
 function freshSets(exd){
-  return Array.from({length:exd.sets}, () => ({w:'',r:'',e:0,done:false}));
+  return Array.from({length:exd.sets}, () => ({w:'',r:'',e:0,c:false,done:false}));
 }
 function slotsFor(exd){
   const a = store.active;
@@ -487,202 +1053,620 @@ function exComplete(exId){
   if(!Array.isArray(s) || !s.length) return false;
   return s.every(x => x.done) || s.every(x => x.w !== '' || x.r !== '');
 }
+function exSkipped(exId){ return !!(store.active.skipped && store.active.skipped[exId]); }
+/* Done or deliberately not done. Both mean "nothing left to do here", which
+   is what the progress rule and the auto-advance care about. */
+function exResolved(exId){ return exSkipped(exId) || exComplete(exId); }
+
+/* How many past sessions carry data for this movement. Used to decide whether
+   the form cue still needs to be on screen: it does for the first few, and
+   after that it is just taking up room above the numbers. */
+function timesLogged(exId){
+  return store.history.reduce((n, s) =>
+    n + (s.ex && Array.isArray(s.ex[exId]) && s.ex[exId].some(x => x && (x.w || x.r)) ? 1 : 0), 0);
+}
+
+/* Consecutive exercises sharing a group are performed back to back with no
+   rest, which is what a round is. Returns the template's exercises as a list
+   of blocks: either a single exercise, or a group to be run as rounds.
+   A group whose members disagree on set count cannot be laid out as rounds,
+   so it falls back to one card each. */
+function blocksOf(t){
+  const out = [];
+  t.exercises.forEach(exd => {
+    const prev = out[out.length - 1];
+    if(exd.group && prev && prev.group === exd.group) prev.items.push(exd);
+    else out.push({group: exd.group || null, items: [exd]});
+  });
+  return out.map(b => {
+    const rounds = b.items[0].sets;
+    const uniform = b.items.length > 1 && b.items.every(e => e.sets === rounds);
+    return uniform ? {...b, rounds} : {...b, rounds: 0};
+  });
+}
+
+/* Rest after this set. Inside a giant set there is none until the last
+   exercise of the round: that is the whole point of a giant set. */
+function restFor(exd, lastInGroup){
+  if(exd.rest !== undefined) return exd.rest;
+  if(exd.group && !lastInGroup) return 0;
+  return 90;
+}
+
+function buzz(pattern){ try{ if(navigator.vibrate) navigator.vibrate(pattern); }catch(e){} }
+
+/* Put a node where the thumb is, roughly 58% down, but only when it is not
+   already comfortably in view. Moving the page when it did not need moving is
+   the thing this whole rework is about. */
+function bringIntoWorkZone(node){
+  if(!node) return;
+  const r = node.getBoundingClientRect();
+  if(r.top > 80 && r.bottom < innerHeight - 110) return;
+  const target = innerHeight * 0.58 - r.height;
+  window.scrollBy({top: r.top - target, behavior:'smooth'});
+}
 
 function renderSession(app){
   const a = store.active;
   if(!a){ view = 'home'; return render(); }
   const t = tmpl(a.track, a.templateId);
 
+  const editing = a.editIndex !== undefined;
   app.appendChild(el(`
     <div class="sesshead">
       <div>
-        <div class="eyebrow">${a.track === 'gym' ? 'Gym' : 'Home'} session ${a.num}</div>
+        <div class="eyebrow">${editing ? 'Correcting ' : ''}${a.track === 'gym' ? 'Gym' : 'Home'} session ${a.num}</div>
         <h2>${esc(t.name)}</h2>
       </div>
-      <div class="n">${esc(t.focus)}</div>
+      <div class="n">${esc(editing ? 'Already logged. Changes save over it.' : t.focus)}</div>
     </div>`));
 
-  /* cardio card */
+  /* How much is left, without a sentence to read. */
+  app.appendChild(el(`<div class="progress">${
+    t.exercises.map(e =>
+      `<i data-p="${esc(e.id)}" class="${exSkipped(e.id) ? 'skip' : exComplete(e.id) ? 'on' : ''}"></i>`).join('')
+  }</div>`));
+
+  /* Walk card, gym only. A home session has no cardio prescription at all,
+     so there is nothing to show and nothing to log. */
   const c = a.cardio;
+  if(c && c.speed){
+  /* Once the walk is logged it collapses to a single row. It is the first
+     thing on the screen and you scroll past it twenty more times. */
   const cardio = el(`
-    <div class="card cardio">
+    <div class="card cardio${c.done ? ' folded' : ''}">
+      <button class="cardiosum">
+        <span class="tick">&#10003;</span>
+        <span>Walk <b>${esc(c.actual || c.minutes)} min</b> at ${esc(c.speed)} km/h, ${esc(c.incline)} percent</span>
+      </button>
       <div class="pad">
         <div class="eyebrow">Treadmill walk, ${esc(c.when)}</div>
-        <img class="shot" src="img/walk.png" alt="">
+        <img class="shot" src="img/walk.png" alt="Treadmill walk">
         <div class="presc">
           <div><b>${c.minutes}</b><span>minutes</span></div>
           <div><b>${c.speed}</b><span>km/h</span></div>
           <div><b>${c.incline}</b><span>percent</span></div>
         </div>
-        <div class="setgrid">
-          <span class="idx"></span>
-          <span class="unit" data-u="MIN DONE"><input type="number" inputmode="decimal" id="cardioAct" placeholder="${c.minutes}" value="${c.actual}"></span>
-          <span class="muted" style="font-size:13px">Log what you actually walked</span>
-          <button class="setdone" id="cardioDone" aria-pressed="${c.done}">&#10003;</button>
+        <p class="cue" style="margin:0 0 8px">Log what you actually walked.</p>
+        <div class="setgrid cardiogrid">
+          <span class="unit" data-u="MIN DONE"><input type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" id="cardioAct" placeholder="${c.minutes}" value="${esc(c.actual)}"></span>
+          <button class="setdone" id="cardioDone" aria-pressed="${c.done}" aria-label="Walk done">&#10003;</button>
         </div>
       </div>
     </div>`);
   const walkShot = cardio.querySelector('.shot');
   walkShot.onload = () => walkShot.classList.add('ready');
   walkShot.onerror = () => walkShot.remove();
-  cardio.querySelector('#cardioAct').oninput = e => { a.cardio.actual = e.target.value; save(); };
+  field(cardio.querySelector('#cardioAct'), true, v => { a.cardio.actual = v; saveSoon(); });
   cardio.querySelector('#cardioDone').onclick = e => {
     a.cardio.done = !a.cardio.done;
     e.currentTarget.setAttribute('aria-pressed', a.cardio.done);
+    cardio.classList.toggle('folded', a.cardio.done);
+    if(a.cardio.done){
+      cardio.querySelector('.cardiosum b').textContent = (a.cardio.actual || c.minutes) + ' min';
+      buzz(12);
+    }
     save();
   };
+  cardio.querySelector('.cardiosum').onclick = () => cardio.classList.remove('folded');
   app.appendChild(cardio);
+  }
 
-  /* exercises */
-  let shownGroup = null;
-  t.exercises.forEach(exd => {
-    if(exd.group && exd.group !== shownGroup){
-      app.appendChild(el(`<div class="group">${esc(exd.group)}</div>`));
-    }
-    shownGroup = exd.group || null;
+  /* Exercises. A group runs as rounds, everything else as its own card. */
+  blocksOf(t).forEach(b => {
+    if(b.rounds) return app.appendChild(buildRoundBlock(b));
+    const exd = b.items[0];
     const sets = slotsFor(exd);
     const done = exComplete(exd.id);
     const isOpen = openEx === exd.id;
-    const card = el(`<div class="ex ${done ? 'done' : ''}"></div>`);
+    const card = el(`<div class="ex ${done ? 'done' : ''}" data-ex="${esc(exd.id)}"></div>`);
 
     const summary = sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
     const head = el(`
-      <button class="exhead">
+      <button class="exhead" aria-expanded="${isOpen}">
         <span class="tick">${done ? '&#10003;' : ''}</span>
         <span>
           <h3>${esc(exd.name)}</h3>
           <span class="sub">${esc(summary)}</span>
         </span>
       </button>`);
-    head.onclick = () => { openEx = isOpen ? null : exd.id; render(); };
+    head.onclick = () => toggleEx(exd.id);
     card.appendChild(head);
-
-    if(isOpen){
-      const body = el('<div class="exbody"></div>');
-
-      /* Start and end frames, looked up by exercise id. There is no image
-         field in PROGRAM on purpose: drop img/<id>.png in and it appears.
-         Not lazy: only one exercise body exists at a time, and lazy would
-         defer the error handler that hides the frame when there is no file. */
-      const shot = el(`<img class="shot" src="img/${encodeURIComponent(exd.id)}.png" alt="">`);
-      shot.onload = () => shot.classList.add('ready');
-      shot.onerror = () => shot.remove();
-      body.appendChild(shot);
-
-      const prev = lastFor(exd.id);
-      if(prev) body.appendChild(el(`<div class="last">Last time: ${esc(setLine(prev.sets))}</div>`));
-      body.appendChild(el(`<p class="cue">${esc(exd.cue)} <span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span></p>`));
-      if(exd.link) body.appendChild(el(`<a class="demo" href="${esc(exd.link)}" target="_blank" rel="noopener">Watch the movement</a>`));
-
-      sets.forEach((s, i) => {
-        const row = el(`
-          <div class="setrow">
-            <div class="setgrid">
-              <span class="idx">${i+1}</span>
-              <span class="unit" data-u="KG"><input type="number" inputmode="decimal" step="0.5" value="${s.w}" placeholder="${prev && prev.sets[i] && prev.sets[i].w ? prev.sets[i].w : ''}"></span>
-              <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input type="number" inputmode="numeric" value="${s.r}" placeholder="${prev && prev.sets[i] && prev.sets[i].r ? prev.sets[i].r : ''}"></span>
-              <button class="setdone" aria-pressed="${s.done}">&#10003;</button>
-            </div>
-            <div class="effort">
-              ${EFFORT.map((lab,k)=>`<button aria-pressed="${s.e === k+1}" data-e="${k+1}">${lab}</button>`).join('')}
-            </div>
-          </div>`);
-        const [wIn, rIn] = row.querySelectorAll('input');
-        wIn.oninput = e => { s.w = e.target.value; save(); };
-        rIn.oninput = e => { s.r = e.target.value; save(); };
-        row.querySelector('.setdone').onclick = e => {
-          s.done = !s.done;
-          e.currentTarget.setAttribute('aria-pressed', s.done);
-          if(s.done) startTimer(90);
-          save(); updateHeadState(card, exd.id);
-        };
-        row.querySelectorAll('.effort button').forEach(b => {
-          b.onclick = () => {
-            const v = Number(b.dataset.e);
-            s.e = (s.e === v) ? 0 : v;
-            row.querySelectorAll('.effort button').forEach(x =>
-              x.setAttribute('aria-pressed', Number(x.dataset.e) === s.e));
-            save();
-          };
-        });
-        body.appendChild(row);
-      });
-
-      const actions = el('<div class="exactions"></div>');
-      const addSet = el('<button class="linkbtn">Add a set</button>');
-      addSet.onclick = () => { sets.push({w:'',r:'',e:0,done:false}); save(); render(); };
-      const copyLast = el('<button class="linkbtn" style="margin-left:auto">Copy last time</button>');
-      copyLast.onclick = () => {
-        if(!prev) return toast('No previous data for this one yet');
-        sets.forEach((s,i) => { if(prev.sets[i]){ s.w = prev.sets[i].w; s.r = prev.sets[i].r; } });
-        save(); render();
-      };
-      actions.appendChild(addSet); actions.appendChild(copyLast);
-      body.appendChild(actions);
-      card.appendChild(body);
-    }
+    if(isOpen){ card.classList.add('open'); card.appendChild(buildExBody(exd)); }
     app.appendChild(card);
   });
-
-  /* note */
-  const note = el(`
-    <div class="card"><div class="pad">
-      <div class="eyebrow" style="margin-bottom:8px">Note</div>
-      <textarea placeholder="Anything worth knowing next time. Machine settings, a niggle, how it felt.">${esc(a.note)}</textarea>
-    </div></div>`);
-  note.querySelector('textarea').oninput = e => { a.note = e.target.value; save(); };
-  app.appendChild(note);
 
   /* footer */
   const foot = $('#foot');
   foot.hidden = false;
-  foot.innerHTML = '<div class="inner"><button class="timer" id="timerBtn">Rest</button><button class="btn" id="finishBtn">Finish session</button></div>';
-  foot.querySelector('#timerBtn').onclick = () => timerRunning ? stopTimer() : startTimer(90);
+  foot.innerHTML =
+    '<div class="inner">' +
+      '<button class="timer" id="timerBtn">Rest</button>' +
+      '<button class="btn" id="finishBtn">' + (editing ? 'Save changes' : 'Finish session') + '</button>' +
+      '<button class="timerx" id="timerX" aria-label="Skip the rest">&times;</button>' +
+    '</div>';
+  /* While a rest is running the bar is the countdown, and tapping it buys
+     another 30 seconds. Skipping is its own button rather than a long press,
+     because one hand is holding a bar. */
+  foot.querySelector('#timerBtn').onclick = () => timerRunning ? addTime(30) : startTimer(90);
+  foot.querySelector('#timerX').onclick = stopTimer;
   foot.querySelector('#finishBtn').onclick = finishSession;
   paintTimer();
 }
 
-function updateHeadState(card, exId){
-  const done = exComplete(exId);
-  card.classList.toggle('done', done);
-  card.querySelector('.tick').innerHTML = done ? '&#10003;' : '';
+function cardFor(exId){ return document.querySelector('.ex[data-ex="' + CSS.escape(exId) + '"]'); }
+
+/* The head carries the tick and the set line. Both change as you log, and
+   neither is worth a re-render. */
+function refreshHead(exd){
+  const done = exComplete(exd.id), skipped = exSkipped(exd.id);
+  const dot = document.querySelector(`.progress i[data-p="${CSS.escape(exd.id)}"]`);
+  if(dot){ dot.classList.toggle('on', done && !skipped); dot.classList.toggle('skip', skipped); }
+  const card = cardFor(exd.id); if(!card) return;
+  const sets = store.active.ex[exd.id] || [];
+  card.classList.toggle('done', done && !skipped);
+  card.classList.toggle('skipped', skipped);
+  card.querySelector('.tick').innerHTML = skipped ? '&ndash;' : done ? '&#10003;' : '';
+  card.querySelector('.sub').textContent = skipped ? 'Skipped'
+    : sets.some(s => s.w || s.r) ? setLine(sets) : (exd.sets + ' x ' + exd.reps);
 }
 
-function finishSession(){
+/* Open or close an exercise by swapping one node. This used to call render(),
+   which rebuilt the page and scrolled it to the top: on a phone that put the
+   exercise you had just tapped below the bottom of the screen. Anchoring on
+   the head keeps the tapped row exactly where your thumb left it. */
+function toggleEx(exId){
+  const a = store.active; if(!a) return;
+  const t = tmpl(a.track, a.templateId);
+  const target = cardFor(exId); if(!target) return;
+  const before = target.querySelector('.exhead').getBoundingClientRect().top;
+
+  const open = document.querySelector('.ex.open');
+  if(open){
+    const body = open.querySelector('.exbody');
+    if(body) body.remove();
+    open.classList.remove('open');
+    open.querySelector('.exhead').setAttribute('aria-expanded', 'false');
+  }
+
+  if(openEx === exId){
+    openEx = null;
+  }else{
+    const exd = t.exercises.find(e => e.id === exId);
+    if(exd){
+      openEx = exId;
+      target.classList.add('open');
+      target.querySelector('.exhead').setAttribute('aria-expanded', 'true');
+      target.appendChild(buildExBody(exd));
+    }
+  }
+
+  const after = target.querySelector('.exhead').getBoundingClientRect().top;
+  if(after !== before) window.scrollBy(0, after - before);
+}
+
+/* A giant set laid out the way it is performed: round one is curl, press,
+   row with no rest, then rest, then round two. The old layout asked for three
+   curls, then three presses, then three rows, which is three accordion taps
+   per round and not the order anything actually happens in.
+   The data shape is untouched: this reads the group label PROGRAM already
+   carries, which means "back to back with no rest" -- that is a round. */
+function buildRoundBlock(b){
+  const block = el(`<div class="rblock" data-group="${esc(b.group)}"></div>`);
+  const head = el(`
+    <div class="rhead">
+      <span class="group">${esc(b.group)}</span>
+      <button class="linkbtn form">Form</button>
+    </div>`);
+  block.appendChild(head);
+
+  /* Cues and the start/end frames sit behind Form once the movement is
+     familiar, and stay open while it is not. Nothing to configure: it
+     follows how many times you have actually logged it. */
+  const green = b.items.some(e => timesLogged(e.id) < 3);
+  const forms = el(`<div class="forms${green ? ' show' : ''}"></div>`);
+  b.items.forEach(exd => {
+    const f = el(`<div class="forminfo"><h4>${esc(exd.name)}</h4><p class="cue">${esc(exd.cue)}</p></div>`);
+    const shot = el(`<img class="shot" src="img/${encodeURIComponent(exd.id)}.png" alt="${esc(exd.name)}: start position on the left, end position on the right">`);
+    shot.onload = () => shot.classList.add('ready');
+    shot.onerror = () => shot.remove();
+    f.appendChild(shot);
+    f.appendChild(buildExNote(exd));
+    f.appendChild(buildSkip(exd));
+    forms.appendChild(f);
+  });
+  head.querySelector('.form').onclick = () => forms.classList.toggle('show');
+  block.appendChild(forms);
+
+  for(let r = 0; r < b.rounds; r++){
+    const round = el(`<div class="round" data-round="${r}"><div class="rnum">Round ${r+1}</div></div>`);
+    b.items.forEach((exd, k) => {
+      const sets = slotsFor(exd);
+      if(!sets[r]) return;
+      round.appendChild(buildSetRow(exd, sets[r], r, lastFor(exd.id), {
+        label: exd.name,
+        lastInGroup: k === b.items.length - 1
+      }));
+    });
+    block.appendChild(round);
+  }
+  return block;
+}
+
+/* "Shoulder was complaining, left the press out" needs somewhere to go.
+   Blank reads as forgotten and a made-up number corrupts the trend, so a
+   skipped exercise says so, and the trend leaves those sessions out. */
+function buildSkip(exd){
+  const b = el(`<button class="linkbtn skip" aria-pressed="${exSkipped(exd.id)}">${exSkipped(exd.id) ? 'Skipped' : 'Skip'}</button>`);
+  b.onclick = () => {
+    const a = store.active;
+    if(a.skipped[exd.id]) delete a.skipped[exd.id]; else a.skipped[exd.id] = true;
+    b.setAttribute('aria-pressed', exSkipped(exd.id));
+    b.textContent = exSkipped(exd.id) ? 'Skipped' : 'Skip';
+    save(); refreshHead(exd);
+  };
+  return b;
+}
+
+/* A note against the movement rather than against the session. "Chest press
+   seat 4, pin 7" is true every week, so the last one written is offered back
+   as the starting text. */
+function buildExNote(exd){
   const a = store.active;
-  const logged = Object.values(a.ex).some(sets => sets.some(s => s.w || s.r)) || a.cardio.done || a.cardio.actual;
-  if(!logged && !confirm('Nothing is logged in this session. Finish it anyway?')) return;
+  const wrap = el(`<div class="exnote"><div class="eyebrow">Note</div></div>`);
+  const last = lastNoteFor(exd.id);
+  const ta = el(`<textarea placeholder="${esc(last || 'Machine settings, a niggle, anything worth knowing next time.')}">${esc(a.exNote[exd.id] || '')}</textarea>`);
+  ta.oninput = e => { a.exNote[exd.id] = e.target.value; saveSoon(); };
+  wrap.appendChild(ta);
+  if(last && !a.exNote[exd.id]){
+    const take = el('<button class="linkbtn">Use last time&rsquo;s note</button>');
+    take.onclick = () => { ta.value = last; a.exNote[exd.id] = last; save(); take.remove(); };
+    wrap.appendChild(take);
+  }
+  return wrap;
+}
+
+function buildExBody(exd){
+  const sets = slotsFor(exd);
+  const prev = lastFor(exd.id);
+  const body = el('<div class="exbody"></div>');
+
+  if(prev) body.appendChild(el(`<div class="last">Last time: ${esc(setLine(prev.sets))}</div>`));
+
+  /* Form goes behind a tap once the movement is familiar, so opening a known
+     exercise lands on the numbers rather than on a diagram you have seen
+     thirty times. Same rule as the round block, and nothing to configure. */
+  const green = timesLogged(exd.id) < 3;
+  const forms = el(`<div class="forms${green ? ' show' : ''}"></div>`);
+  /* Start and end frames, looked up by exercise id. There is no image
+     field in PROGRAM on purpose: drop img/<id>.png in and it appears.
+     Not lazy: only one exercise body exists at a time, and lazy would
+     defer the error handler that hides the frame when there is no file. */
+  const shot = el(`<img class="shot" src="img/${encodeURIComponent(exd.id)}.png" alt="${esc(exd.name)}: start position on the left, end position on the right">`);
+  shot.onload = () => shot.classList.add('ready');
+  shot.onerror = () => shot.remove();
+  forms.appendChild(el(`<p class="cue">${esc(exd.cue)}</p>`));
+  forms.appendChild(shot);
+  if(exd.link) forms.appendChild(el(`<a class="demo" href="${esc(exd.link)}" target="_blank" rel="noopener">Watch the movement</a>`));
+  forms.appendChild(buildExNote(exd));
+
+  const target = el(`<div class="exmeta"><span class="mono">Target ${exd.sets} x ${esc(exd.reps)}</span><button class="linkbtn form">Form</button></div>`);
+  target.querySelector('.form').onclick = () => forms.classList.toggle('show');
+  target.insertBefore(buildSkip(exd), target.querySelector('.form'));
+  body.appendChild(target);
+  body.appendChild(forms);
+
+  sets.forEach((s, i) => body.appendChild(buildSetRow(exd, s, i, prev)));
+
+  const actions = el('<div class="exactions"></div>');
+  const addSet = el('<button class="linkbtn">Add a set</button>');
+  addSet.onclick = () => {
+    const s = {w:'',r:'',e:0,c:false,done:false};
+    sets.push(s); save();
+    actions.parentNode.insertBefore(buildSetRow(exd, s, sets.length - 1, prev), actions);
+    refreshHead(exd);
+  };
+  const copyLast = el('<button class="linkbtn" style="margin-left:auto">Copy last time</button>');
+  copyLast.onclick = () => {
+    if(!prev) return toast('No previous data for this one yet');
+    sets.forEach((s,i) => { if(prev.sets[i]){ s.w = prev.sets[i].w; s.r = prev.sets[i].r; } });
+    save();
+    /* Write straight into the live fields. Re-rendering would move the page. */
+    body.querySelectorAll('.setrow').forEach((row, i) => {
+      if(!sets[i]) return;
+      const w = row.querySelector('[data-f="w"]'), r = row.querySelector('[data-f="r"]');
+      if(w) w.value = sets[i].w;
+      if(r) r.value = sets[i].r;
+    });
+    refreshHead(exd);
+  };
+  actions.appendChild(addSet); actions.appendChild(copyLast);
+  body.appendChild(actions);
+  return body;
+}
+
+function buildSetRow(exd, s, i, prev, opt){
+  opt = opt || {};
+  const ph = k => prev && prev.sets[i] && prev.sets[i][k] ? esc(prev.sets[i][k]) : '';
+  /* Bodyweight work gets no kg field. Sixteen empty boxes in the home block
+     were nothing but something to tab past. */
+  const loaded = exd.weight !== false;
+  const row = el(`
+    <div class="setrow" data-ex="${esc(exd.id)}" data-set="${i}">
+      ${opt.label ? `<div class="rowlabel">${esc(opt.label)}</div>` : ''}
+      <div class="setgrid${loaded ? '' : ' noweight'}">
+        <span class="idx">${opt.label ? '' : i+1}</span>
+        ${loaded ? `<span class="stepper">
+          <button class="step" data-d="-1" aria-label="Less weight" tabindex="-1">&minus;</button>
+          <span class="unit" data-u="KG"><input data-f="w" type="text" inputmode="decimal" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.w)}" placeholder="${ph('w')}" aria-label="Set ${i+1} weight in kilos"></span>
+          <button class="step" data-d="1" aria-label="More weight" tabindex="-1">+</button>
+        </span>` : ''}
+        <span class="unit" data-u="${esc((exd.unit || 'reps').toUpperCase())}"><input data-f="r" type="text" inputmode="numeric" enterkeyhint="next" autocomplete="off" autocorrect="off" spellcheck="false" value="${esc(s.r)}" placeholder="${ph('r')}" aria-label="Set ${i+1} ${esc(exd.unit || 'reps')}"></span>
+        <button class="setdone" aria-pressed="${s.done}" aria-label="Set ${i+1} complete">&#10003;</button>
+      </div>
+      <button class="cut" aria-pressed="${!!s.c}">&#10033; Cut short</button>
+    </div>`);
+  const wIn = row.querySelector('[data-f="w"]');
+  const rIn = row.querySelector('[data-f="r"]');
+  if(wIn) field(wIn, true, v => { s.w = v; saveSoon(); refreshHead(exd); });
+  field(rIn, false, v => { s.r = v; saveSoon(); refreshHead(exd); });
+
+  /* Load is the one thing the programme asks you to change, so changing it
+     should not mean opening a keypad. Hold to run. */
+  row.querySelectorAll('.step').forEach(b => {
+    const bump = () => {
+      const step = 2.5 * Number(b.dataset.d);
+      const base = Number(wIn.value || wIn.placeholder || 0);
+      const next = Math.max(0, Math.round((base + step) * 4) / 4);
+      wIn.value = next % 1 === 0 ? String(next) : String(next);
+      s.w = wIn.value; saveSoon(); refreshHead(exd); buzz(8);
+    };
+    let hold, rep;
+    const stop = () => { clearTimeout(hold); clearInterval(rep); };
+    b.onpointerdown = () => { bump(); hold = setTimeout(() => { rep = setInterval(bump, 120); }, 500); };
+    b.onpointerup = b.onpointerleave = b.onpointercancel = stop;
+  });
+
+  /* Every working set is meant to go to failure, so Easy/OK/Hard/Max answered
+     "Max" almost every time and cost a whole row per set. The one bit worth
+     recording is when a set did NOT go the distance. It only appears once the
+     set is ticked, which is when you would know. */
+  row.querySelector('.cut').onclick = e => {
+    s.c = !s.c;
+    e.currentTarget.setAttribute('aria-pressed', !!s.c);
+    save(); refreshHead(exd);
+  };
+  row.querySelector('.setdone').onclick = e => {
+    s.done = !s.done;
+    e.currentTarget.setAttribute('aria-pressed', s.done);
+    row.classList.toggle('done', s.done);
+    if(s.done){
+      buzz(12);
+      const rest = restFor(exd, opt.lastInGroup !== false);
+      if(rest) startTimer(rest);
+      if(opt.lastInGroup) buzz([20,60,20]);
+    }else{
+      stopTimer();
+    }
+    save(); refreshHead(exd);
+    if(s.done) advanceFrom(exd, i);
+  };
+  if(s.done) row.classList.add('done');
+  return row;
+}
+
+/* Ticking the last set of an exercise closes it and opens the next one that
+   still needs doing, so the thing you need next is the thing on screen. */
+function advanceFrom(exd, i){
+  const a = store.active; if(!a) return;
+  const t = tmpl(a.track, a.templateId);
+  if(!exComplete(exd.id)) return;
+  if(exd.group){
+    const round = document.querySelector(`.setrow[data-ex="${CSS.escape(exd.id)}"][data-set="${i}"]`);
+    const next = round && round.parentNode.nextElementSibling;
+    return bringIntoWorkZone(next && next.classList.contains('round') ? next : null);
+  }
+  const rest = t.exercises.slice(t.exercises.findIndex(e => e.id === exd.id) + 1);
+  const next = rest.find(e => !exResolved(e.id) && !e.group);
+  if(!next) return;
+  toggleEx(exd.id);            /* close the finished one */
+  toggleEx(next.id);
+  bringIntoWorkZone(cardFor(next.id));
+}
+
+async function finishSession(){
+  const a = store.active;
+
+  /* Saving a correction to an already logged session: write it back over the
+     same entry, and do not count it again. */
+  if(a.editIndex !== undefined){
+    const i = a.editIndex;
+    const note = await ask({title:'Save changes', body:'To session ' + a.num + '.',
+                            field:'Session note', value:a.note,
+                            confirmLabel:'Save', cancelLabel:'Back'});
+    if(note === false) return;
+    a.note = typeof note === 'string' ? note : a.note;
+    a.finishedAt = store.history[i].finishedAt;
+    delete a.editIndex;
+    store.history[i] = a;
+    store.active = null;
+    stopTimer(); keepAwake(false); save();
+    toast('Session ' + a.num + ' updated');
+    view = 'history'; render();
+    return;
+  }
+
+  const logged = Object.values(a.ex).some(sets => Array.isArray(sets) && sets.some(s => s.w || s.r))
+                 || a.cardio.done || a.cardio.actual;
+  if(!logged && !await ask({title:'Nothing is logged', body:'Finish this session anyway?',
+                            confirmLabel:'Finish', danger:true})) return;
+  /* The session note is asked for here rather than sitting at the bottom of
+     the working list, because this is the moment you have something to say.
+     Machine settings live on the exercise, not on the session. */
+  const note = await ask({
+    title:'Finish session',
+    body:'Anything worth knowing next week? Sleep, food, a niggle, how it went.',
+    field:'Optional', value:a.note, confirmLabel:'Log it', cancelLabel:'Back'
+  });
+  if(note === false) return;
+  a.note = typeof note === 'string' ? note : a.note;
   a.finishedAt = new Date().toISOString();
   store.history.push(a);
   if(a.track === 'gym') store.gymDone++; else store.homeDone++;
   store.active = null;
-  stopTimer(); save();
-  toast('Session ' + a.num + ' logged');
+  stopTimer(); keepAwake(false); save();
+  buzz([30,50,30,50,80]);
+  toast('Session ' + a.num + ' logged', () => {
+    /* Undo beats a confirmation dialog for anything reversible. */
+    store.active = store.history.pop();
+    delete store.active.finishedAt;
+    if(store.active.track === 'gym') store.gymDone--; else store.homeDone--;
+    save(); view = 'session'; render();
+  });
   view = 'home'; render();
 }
 
-/* rest timer */
-let timerEnd = 0, timerRunning = false, timerInt = null;
+/* Rest timer. The deadline is kept in its own key rather than in the store:
+   it is throwaway UI state, and putting it in sessions.v1 would mean a schema
+   bump for something that is meaningless a minute later. */
+const TKEY = 'sessions.timer';
+let timerEnd = 0, timerTotal = 90, timerRunning = false, timerInt = null, warned = false;
+
 function startTimer(sec){
-  timerEnd = Date.now() + sec*1000; timerRunning = true;
-  clearInterval(timerInt); timerInt = setInterval(paintTimer, 250); paintTimer();
+  timerEnd = Date.now() + sec*1000; timerTotal = sec; timerRunning = true; warned = false;
+  try{ localStorage.setItem(TKEY, timerEnd + ',' + sec); }catch(e){}
+  clearInterval(timerInt); timerInt = setInterval(tickTimer, 250); tickTimer();
 }
-function stopTimer(){ timerRunning = false; clearInterval(timerInt); paintTimer(); }
-function paintTimer(){
-  const b = document.querySelector('#timerBtn'); if(!b) return;
-  if(!timerRunning){ b.textContent = 'Rest'; b.classList.remove('run'); return; }
+function stopTimer(){
+  timerRunning = false; clearInterval(timerInt); timerInt = null;
+  try{ localStorage.removeItem(TKEY); }catch(e){}
+  paintTimer();
+}
+function addTime(sec){
+  if(!timerRunning) return;
+  timerEnd += sec*1000; timerTotal += sec; warned = false;
+  try{ localStorage.setItem(TKEY, timerEnd + ',' + timerTotal); }catch(e){}
+  tickTimer();
+}
+/* The completion check lives here and not in paintTimer, which returns early
+   when the button is off screen. It used to mean the interval ran for ever and
+   the rest never announced itself if you switched to another view. */
+function tickTimer(){
   const left = Math.max(0, Math.round((timerEnd - Date.now())/1000));
+  /* Ten seconds out, so you can rack up and get set without watching the
+     screen. On iOS there is no vibration, so the bar pulses too. */
+  if(left <= 10 && left > 0 && !warned){ warned = true; buzz(30); }
+  paintTimer(left);
+  if(left === 0){
+    stopTimer();
+    toast('Rest done');
+    buzz([200,100,200]);
+  }
+}
+function paintTimer(left){
+  const b = document.querySelector('#timerBtn');
+  const foot = $('#foot');
+  if(!b) return;
+  if(!timerRunning){
+    b.textContent = 'Rest';
+    b.classList.remove('run','warn');
+    b.style.removeProperty('--left');
+    foot.classList.remove('resting');
+    return;
+  }
+  if(left === undefined) left = Math.max(0, Math.round((timerEnd - Date.now())/1000));
   b.textContent = Math.floor(left/60) + ':' + String(left%60).padStart(2,'0');
   b.classList.add('run');
-  if(left === 0){ stopTimer(); toast('Rest done'); if(navigator.vibrate) navigator.vibrate(200); }
+  b.classList.toggle('warn', left <= 10);
+  b.style.setProperty('--left', Math.max(0, Math.min(100, (left / timerTotal) * 100)) + '%');
+  foot.classList.add('resting');
+}
+/* Pick a running rest back up after a reload. Phones evict a backgrounded PWA
+   readily, and the countdown is computed from the deadline, never from ticks,
+   so time that passed while the app was gone still counts. */
+function resumeTimer(){
+  let raw = '';
+  try{ raw = localStorage.getItem(TKEY) || ''; }catch(e){}
+  if(!raw) return;
+  const [end, total] = raw.split(',').map(Number);
+  if(end > Date.now()){
+    timerEnd = end; timerTotal = total || 90; timerRunning = true; warned = false;
+    clearInterval(timerInt); timerInt = setInterval(tickTimer, 250); tickTimer();
+  }else{
+    try{ localStorage.removeItem(TKEY); }catch(e){}
+  }
 }
 
+let logTab = 'sessions', openMove = null;
+
 function renderHistory(app){
+  const tabs = el(`
+    <div class="tabs">
+      <button data-t="sessions" aria-current="${logTab === 'sessions'}">Sessions</button>
+      <button data-t="exercises" aria-current="${logTab === 'exercises'}">Exercises</button>
+    </div>`);
+  tabs.querySelectorAll('button').forEach(b => b.onclick = () => {
+    logTab = b.dataset.t; openMove = null; render();
+  });
+  app.appendChild(tabs);
+
   if(!store.history.length){
     app.appendChild(el('<div class="empty">No sessions logged yet. Start one from Now.</div>'));
     return;
   }
-  [...store.history].reverse().forEach(s => {
+  if(logTab === 'sessions') renderSessionsTab(app); else renderExercisesTab(app);
+}
+
+/* One line of what happened, so the common question does not need a tap. */
+function previewOf(s){
+  const t = tmpl(s.track, s.templateId);
+  const names = new Map(t.exercises.map(e => [e.id, e.name]));
+  const parts = [];
+  for(const [id, name] of names){
+    if(s.skipped && s.skipped[id]) continue;
+    const loaded = !exDef(id) || exDef(id).weight !== false;
+    const top = topSet(s.ex[id], loaded);
+    if(top === null) continue;
+    /* The id, not the name: "Barbell curl" and "Barbell row" both start with
+       "Barbell", and the ids are short, unique and hand-picked already. */
+    parts.push(id + ' ' + top + (loaded ? '' : 'x'));
+    if(parts.length === 3) break;
+  }
+  return parts.join('  ·  ') || 'nothing logged';
+}
+function bucketOf(iso){
+  const d = new Date(iso), now = new Date();
+  const days = Math.floor((now - d) / 864e5);
+  if(days <= 7) return 'This week';
+  if(days <= 14) return 'Last week';
+  return d.toLocaleDateString(undefined, {month:'long', year:'numeric'});
+}
+
+function renderSessionsTab(app){
+  let bucket = null;
+  [...store.history].map((s, i) => ({s, i})).reverse().forEach(({s, i}) => {
+    const b = bucketOf(s.finishedAt);
+    if(b !== bucket){ bucket = b; app.appendChild(el(`<div class="divider">${esc(b)}</div>`)); }
     const t = tmpl(s.track, s.templateId);
     const item = el(`
       <button class="hitem">
@@ -690,26 +1674,115 @@ function renderHistory(app){
           <h3>${esc(t.name)} &middot; ${s.num}</h3>
           <span class="date">${fmtDate(s.finishedAt)}</span>
         </span>
+        <span class="preview">${esc(previewOf(s))}</span>
       </button>`);
     item.onclick = () => {
-      let d = item.querySelector('.detail');
-      if(d){ d.remove(); return; }
-      /* Template order first, then anything logged under an id the template
-         no longer lists, so renamed or retired exercises stay readable. */
-      const names = new Map(t.exercises.map(e => [e.id, e.name]));
-      Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
-      const lines = [...names].map(([id, name]) => {
-        const line = setLine(s.ex[id] || []);
-        return name + (line ? '\n  ' + line : '\n  not logged');
-      });
-      const c = s.cardio;
-      const walk = c.speed
-        ? 'Walk: ' + (c.actual || (c.done ? c.minutes : '0')) + ' min at ' + c.speed + ' km/h, ' + c.incline + ' percent'
-        : 'Walk: not logged';
-      item.appendChild(el(`<span class="detail">${esc(walk + '\n\n' + lines.join('\n') + (s.note ? '\n\n' + s.note : ''))}</span>`));
+      const d = item.querySelector('.detail');
+      if(d){ d.remove(); item.querySelector('.preview').style.display = ''; return; }
+      item.querySelector('.preview').style.display = 'none';
+      item.appendChild(buildSessionDetail(s, i));
     };
     app.appendChild(item);
   });
+}
+
+/* An aligned table rather than a wall of monospace. */
+function buildSessionDetail(s, i){
+  const t = tmpl(s.track, s.templateId);
+  const names = new Map(t.exercises.map(e => [e.id, e.name]));
+  Object.keys(s.ex).forEach(id => { if(!names.has(id)) names.set(id, id); });
+  const rows = [...names].map(([id, name]) => {
+    const skipped = s.skipped && s.skipped[id];
+    const line = setLine(s.ex[id] || []);
+    const note = s.exNote && s.exNote[id];
+    return `<tr class="${skipped || !line ? 'na' : ''}">
+      <th>${esc(name)}</th>
+      <td>${skipped ? 'skipped' : esc(line) || 'not logged'}${note ? `<span class="exn">${esc(note)}</span>` : ''}</td>
+    </tr>`;
+  }).join('');
+  const c = s.cardio;
+  const walk = c && c.speed
+    ? (c.actual || (c.done ? c.minutes : '0')) + ' min at ' + c.speed + ' km/h, ' + c.incline + '%'
+    : null;
+  const wrap = el(`
+    <span class="detail">
+      <table>${walk ? `<tr><th>Walk</th><td>${esc(walk)}</td></tr>` : ''}${rows}</table>
+      ${s.note ? `<span class="snote">${esc(s.note)}</span>` : ''}
+      <span class="dactions"><button class="linkbtn edit">Edit this session</button></span>
+    </span>`);
+  wrap.querySelector('.edit').onclick = e => { e.stopPropagation(); editSession(i); };
+  return wrap;
+}
+
+function renderExercisesTab(app){
+  /* Trained movements first, most recent at the top. Anything in the
+     programme but never logged sits underneath rather than at the front. */
+  const ids = allExerciseIds()
+    .filter(x => exerciseHistory(x.id).length || exDef(x.id))
+    .map(x => { const h = exerciseHistory(x.id); return {...x, n:h.length, last:h.length ? h[h.length-1].when : ''}; })
+    .sort((a, b) => (b.n ? 1 : 0) - (a.n ? 1 : 0) || (a.last < b.last ? 1 : a.last > b.last ? -1 : 0));
+  ids.forEach(({id, name}) => {
+    const h = exerciseHistory(id);
+    const loaded = !exDef(id) || exDef(id).weight !== false;
+    const isOpen = openMove === id;
+    const item = el(`
+      <button class="hitem move" aria-expanded="${isOpen}">
+        <span class="top">
+          <h3>${esc(name)}</h3>
+          <span class="date">${h.length ? h[h.length-1].top + (loaded ? ' kg' : ' reps') : '&ndash;'}</span>
+        </span>
+        <span class="preview">${h.length ? h.length + ' session(s) logged' : 'never logged'}</span>
+      </button>`);
+    item.onclick = () => { openMove = isOpen ? null : id; render(); };
+    if(isOpen && h.length){
+      const vals = h.slice(-12).map(x => x.top);
+      const lines = h.slice(-12).reverse()
+        .map(x => `<tr><th>${esc(fmtDate(x.when).split(' ').slice(0,2).join(' '))}</th><td>${esc(setLine(x.sets))}</td></tr>`)
+        .join('');
+      item.appendChild(el(`
+        <span class="detail">
+          ${sparkline(vals)}
+          <span class="sparkcap">${vals.length > 1 ? esc(vals[0] + ' → ' + vals[vals.length-1] + (loaded ? ' kg' : ' reps') + ' over ' + vals.length + ' sessions') : ''}</span>
+          <table>${lines}</table>
+        </span>`));
+    }
+    app.appendChild(item);
+  });
+
+  /* The single derived line, if there is one to draw. */
+  const flags = ids.map(x => ({...x, t: trendFor(x.id)})).filter(x => x.t);
+  if(flags.length){
+    app.appendChild(el(`
+      <div class="signal">
+        ${flags.map(f => `<p>${esc(f.name)}: top set down ${f.t.n} sessions running (${esc(f.t.values.join(' → '))}).</p>`).join('')}
+      </div>`));
+  }
+}
+
+/* Reopen a logged session to correct it. One mistyped weight used to be
+   permanent, and it poisons every later comparison for that movement.
+   editIndex rides on the active session so a reload mid-edit still saves
+   back over the right entry rather than appending a duplicate. */
+async function editSession(i){
+  if(store.active && !await ask({
+      title:'A session is already open',
+      body:'Editing a logged session will discard the one in progress.',
+      confirmLabel:'Discard and edit', danger:true})) return;
+  store.active = {...store.history[i], editIndex: i};
+  delete store.active.finishedAt;
+  save();
+  view = 'session'; openEx = null; render();
+}
+
+/* A quiet line, not a modal and not red. It only has something to say when
+   there is genuinely something to say. */
+function exportNudge(){
+  if(!store.history.length) return 'Nothing to export yet.';
+  if(!store.lastExport) return 'Never exported. ' + store.history.length + ' session(s) live only on this phone.';
+  const days = Math.floor((Date.now() - new Date(store.lastExport).getTime()) / 864e5);
+  const since = store.history.filter(s => new Date(s.finishedAt) > new Date(store.lastExport)).length;
+  if(days >= 30 || since >= 10) return 'Last export ' + days + ' day(s) ago, ' + since + ' session(s) since.';
+  return 'Last export ' + (days === 0 ? 'today' : days + ' day(s) ago') + '.';
 }
 
 function renderData(app){
@@ -722,23 +1795,37 @@ function renderData(app){
         <button class="btn small ghost" id="imp">Import</button>
       </div>
       <input type="file" id="file" accept="application/json" hidden>
+      <p class="muted" style="font-size:var(--t-sub);margin:12px 0 0">${exportNudge()}</p>
     </div></div>`));
   $('#exp').onclick = () => {
     const blob = new Blob([JSON.stringify(store,null,2)], {type:'application/json'});
     const a = document.createElement('a');
     a.href = URL.createObjectURL(blob);
-    a.download = 'sessions-' + new Date().toISOString().slice(0,10) + '.json';
+    /* Minutes in the name, so two exports on one day do not collide. */
+    a.download = 'sessions-' + new Date().toISOString().slice(0,16).replace(/[:T]/g,'-') + '.json';
     a.click(); URL.revokeObjectURL(a.href);
+    store.lastExport = new Date().toISOString(); save(); render();
   };
   $('#imp').onclick = () => $('#file').click();
   $('#file').onchange = e => {
     const f = e.target.files[0]; if(!f) return;
+    e.target.value = '';   /* so picking the same file twice still fires */
     const r = new FileReader();
-    r.onload = () => {
+    r.onload = async () => {
       try{
         const data = JSON.parse(r.result);
         if(!Array.isArray(data.history)) throw new Error('bad file');
         if((Number(data.version) || 0) > SCHEMA) throw new Error('newer');
+        /* Import replaces, it does not merge. Say so before doing it: the two
+           buttons sit next to each other and there is no undo. */
+        const incoming = data.history.length;
+        const go = !store.history.length || await ask({
+          title:'Replace everything?',
+          body:'This phone has ' + store.history.length + ' session(s). The file has ' +
+               incoming + '. Importing replaces what is here and cannot be undone.',
+          confirmLabel:'Replace', danger:true
+        });
+        if(!go) return;
         store = adopt(data); save();
         toast('Imported ' + store.history.length + ' sessions');
         view = 'home'; render();
@@ -751,40 +1838,47 @@ function renderData(app){
     r.readAsText(f);
   };
 
+  /* Counters, rotation and erase are all things you touch once, so they fold
+     away behind one disclosure instead of sitting level with Backup. */
   app.appendChild(el(`
-    <div class="card"><div class="pad">
+    <details class="card"><summary>Programme and counters</summary><div class="pad">
       <div class="eyebrow">Session counters</div>
       <p class="mono" style="margin:8px 0 12px">Gym ${store.gymDone} &nbsp; Home ${store.homeDone}</p>
-      <p class="muted" style="font-size:13px;margin:0 0 12px">The counter picks the next workout in the rotation and sets the walk length. Adjust it if you started mid programme.</p>
+      <p class="muted" style="font-size:var(--t-sub);margin:0 0 12px">The counter picks the next workout in the rotation. Adjust it if you started mid programme.</p>
       <div style="display:flex;gap:10px;flex-wrap:wrap">
         <button class="btn small ghost" id="gplus">Gym +1</button>
         <button class="btn small ghost" id="gminus">Gym -1</button>
         <button class="btn small ghost" id="hplus">Home +1</button>
         <button class="btn small ghost" id="hminus">Home -1</button>
       </div>
-    </div></div>`));
+      <div class="eyebrow" style="margin-top:18px">Rotation</div>
+      <p class="mono" style="font-size:var(--t-sub);margin:8px 0 0;line-height:1.8">
+        Gym: ${PROGRAM.gym.order.map(id => esc(tmpl('gym',id).name)).join(' &rarr; ')} &rarr; repeat<br>
+        Home: ${PROGRAM.home.order.map(id => esc(tmpl('home',id).name)).join(', ')}, daily
+      </p>
+      <p class="muted" style="font-size:var(--t-sub);margin-top:12px">To change exercises, edit the PROGRAM block at the top of index.html. History is kept by exercise id, so keep an id the same if you rename the exercise.</p>
+      <div class="eyebrow" style="margin-top:18px">This phone</div>
+      <p class="mono" style="font-size:var(--t-sub);margin:8px 0 0" id="storageLine">Schema v${store.version} &middot; ${store.history.length} session(s)</p>
+      <div style="margin-top:16px"><button class="btn small danger" id="erase">Erase everything</button></div>
+    </div></details>`));
+  if(navigator.storage && navigator.storage.estimate){
+    navigator.storage.estimate().then(e => {
+      const l = $('#storageLine');
+      if(l && e.usage != null) l.textContent += ' · ' + Math.round(e.usage/1024) + ' kB used';
+    }).catch(() => {});
+  }
   $('#gplus').onclick = () => { store.gymDone++; save(); render(); };
   $('#gminus').onclick = () => { store.gymDone = Math.max(0, store.gymDone-1); save(); render(); };
   $('#hplus').onclick = () => { store.homeDone++; save(); render(); };
   $('#hminus').onclick = () => { store.homeDone = Math.max(0, store.homeDone-1); save(); render(); };
 
-  app.appendChild(el(`
-    <div class="card"><div class="pad">
-      <div class="eyebrow">Rotation</div>
-      <p class="mono" style="font-size:13px;margin:10px 0 0;line-height:1.8">
-        Gym: ${PROGRAM.gym.order.map(id => tmpl('gym',id).name).join(' &rarr; ')} &rarr; repeat<br>
-        Home: ${PROGRAM.home.order.map(id => tmpl('home',id).name).join(', ')}
-      </p>
-      <p class="muted" style="font-size:13px;margin-top:12px">To change exercises, edit the PROGRAM block at the top of index.html. History is kept by exercise id, so keep an id the same if you rename the exercise.</p>
-    </div></div>`));
-
-  const reset = el('<button class="linkbtn" style="color:var(--red)">Erase everything</button>');
-  reset.onclick = () => {
-    if(confirm('Erase all sessions and counters? This cannot be undone.')){
+  $('#erase').onclick = async () => {
+    if(await ask({title:'Erase everything?',
+                  body:'All ' + store.history.length + ' session(s) and both counters. This cannot be undone, and there is no backup unless you have exported one.',
+                  confirmLabel:'Erase', danger:true})){
       store = blank(); save(); view = 'home'; render();
     }
   };
-  app.appendChild(reset);
 }
 
 document.querySelectorAll('.navlinks button').forEach(b => {
@@ -794,6 +1888,12 @@ document.querySelectorAll('.navlinks button').forEach(b => {
 load();
 if(store.active) { view = 'home'; }
 render();
+resumeTimer();
+
+/* Ask for the persistent storage bucket, which is the one Chrome does not
+   evict when the device runs short of space. Granted silently on an installed
+   app; a no-op everywhere else. Export is still the only real backup. */
+if(navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {});
 
 /* Offline support. Registration is deliberately last so a failure here
    can never stop the app from rendering. */
