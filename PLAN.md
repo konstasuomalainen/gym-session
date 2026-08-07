@@ -23,7 +23,7 @@ Branch `refine-phase-1`, not merged to `main` (which deploys straight to Pages).
 | 3a — design system and dark mode | **shipped** | `b0c69fd` |
 | 3b — the working screen | **shipped** | `12d6164` |
 | 4 — calm and clutter *(schema 2)* | **shipped** | `1501c74` |
-| 5 — become a reader | not started | |
+| 5 — become a reader | **shipped** | `1f0cd2a` |
 | 6 — body data | awaiting §16.1 | |
 
 Measured before → after, 360 × 640:
@@ -68,11 +68,17 @@ Measured before → after, 360 × 640:
    Finish; while a rest runs the timer takes the bar and Finish is hidden, which gets the
    reachability without inventing a "current set".
 
-### Carried into Phase 5
+6. **§13.1's per-exercise view answers §2.2's lens better than planned.** The Exercises tab
+   sorts trained movements first and never-logged ones last, which was not specified but is
+   obviously right once you have eight home movements in the programme and none logged.
+7. **§11's threshold is 3 consecutive declines within the last 4 sessions.** Verified live
+   both ways: it fires on 45 → 42.5 → 40 → 37.5, and stays silent on a movement that is
+   still climbing or that dipped only twice. Sessions where the movement was skipped are
+   excluded before the comparison, so a bad week cannot manufacture a signal.
 
-- **§4.8 skip** — the `skipped` field ships in schema 2 and nothing writes it yet. The UI
-  belongs next to the trend in §11, so that a skipped week reads as skipped rather than as
-  a strength drop.
+### Everything in the plan is now built except §14
+
+§4.8 skip, carried over from Phase 4, shipped in Phase 5 alongside the trend as intended.
 
 ## Contents
 
